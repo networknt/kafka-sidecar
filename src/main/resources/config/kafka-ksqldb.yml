@@ -1,0 +1,9 @@
+# ksqlDB host
+ksqldbHost: localhost
+# ksqlDB port
+ksqldbPort: 8088
+# query for the ksqldb. It can be a table or stream.
+query: SELECT * from USER_TABLE EMIT CHANGES;
+# stream query properties
+properties:
+  auto.offset.reset: earliest
