@@ -1,16 +1,9 @@
 package com.networknt.mesh.kafka.handler;
 
-import com.networknt.body.BodyHandler;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
-import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.health.HealthConfig;
-import com.networknt.health.HealthGetHandler;
-import com.networknt.kafka.common.KafkaConsumerConfig;
-import com.networknt.kafka.entity.CreateConsumerInstanceRequest;
-import com.networknt.kafka.entity.CreateConsumerInstanceResponse;
-import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.server.StartupHookProvider;
@@ -27,11 +20,8 @@ import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
 
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 /**
  * The Kafka sidecar specific health check handler return OK only when all enabled components are created
@@ -54,7 +44,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
     public static final String HEALTH_RESULT_OK = "OK";
     public static final String HEALTH_RESULT_ERROR = "ERROR";
     static final Logger logger = LoggerFactory.getLogger(SidecarHealthHandler.class);
-    static final KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    static final HealthConfig config = (HealthConfig) Config.getInstance().getJsonObjectConfig(HealthConfig.CONFIG_NAME, HealthConfig.class);
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -76,8 +66,10 @@ public class SidecarHealthHandler implements LightHttpHandler {
                         logger.error("ReactiveConsumer is enabled but it is not connected to the Kafka cluster.");
                         result = HEALTH_RESULT_ERROR;
                     }
-                    // if backend is not connected, then error.
-                    result = backendHealth();
+                    // if backend is not connected, then error. Check the configuration to see if it is enabled.
+                    if(config.isDownstreamEnabled()) {
+                        result = backendHealth();
+                    }
                 }
             }
         } else {
@@ -105,10 +97,10 @@ public class SidecarHealthHandler implements LightHttpHandler {
         ClientConnection connection = ReactiveConsumerStartupHook.connection;
         if(connection == null || !connection.isOpen()) {
             try {
-                if(config.getBackendApiHost().startsWith("https")) {
-                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getBackendApiHost()), Http2Client.WORKER, ReactiveConsumerStartupHook.client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
+                if(config.getDownstreamHost().startsWith("https")) {
+                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getDownstreamHost()), Http2Client.WORKER, ReactiveConsumerStartupHook.client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
                 } else {
-                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
+                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getDownstreamHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
                 }
             } catch (Exception ex) {
                 logger.error("Could not create connection to the backend:", ex);
@@ -118,7 +110,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         try {
-            ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath("/health");
+            ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
             request.getRequestHeaders().put(Headers.HOST, "localhost");
             connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
             latch.await();
