@@ -12,6 +12,7 @@
 
 .idea/
 target/
+log/
 
 kafka-sidecar.iml
 
