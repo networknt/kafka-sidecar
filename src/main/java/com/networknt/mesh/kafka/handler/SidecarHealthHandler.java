@@ -4,6 +4,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.health.HealthConfig;
+import com.networknt.mesh.kafka.AdminClientStartupHook;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.server.StartupHookProvider;
@@ -15,12 +16,14 @@ import io.undertow.client.ClientResponse;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import org.apache.kafka.clients.admin.DescribeClusterResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
 
 import java.net.URI;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -69,6 +72,14 @@ public class SidecarHealthHandler implements LightHttpHandler {
                     // if backend is not connected, then error. Check the configuration to see if it is enabled.
                     if(config.isDownstreamEnabled()) {
                         result = backendHealth();
+                    }
+                }
+                if(p instanceof AdminClientStartupHook) {
+                    if(AdminClientStartupHook.admin == null) {
+                        logger.error("AdminClient is enabled but it is not connected to the Kafka cluster.");
+                        result = HEALTH_RESULT_ERROR;
+                    } else {
+                        result = kafkaHealth();
                     }
                 }
             }
@@ -124,6 +135,41 @@ public class SidecarHealthHandler implements LightHttpHandler {
             }
         } catch (Exception exception) {
             logger.error("Error while sending a health check request to the backend with exception: ", exception);
+            result = HEALTH_RESULT_ERROR;
+        }
+        return result;
+    }
+
+    /**
+     * Check the Kafka Cluster with Admin Client. Return OK if all three checks are passed. Otherwise, return
+     * error. This is only triggered if AdminClientStartupHook is enabled in the service.yml config file.
+     *
+     * @return OK if all checks are passed.
+     */
+    private String kafkaHealth() {
+        String result = HEALTH_RESULT_OK;
+        try {
+            final DescribeClusterResult response = AdminClientStartupHook.admin.describeCluster();
+            final boolean nodesNotEmpty = !response.nodes().get(config.getTimeout(), TimeUnit.MILLISECONDS).isEmpty();
+            final boolean clusterIdAvailable = response.clusterId() != null;
+            final boolean controllerExists = response.controller().get(config.getTimeout(), TimeUnit.MILLISECONDS) != null;
+
+            if (!nodesNotEmpty) {
+                logger.error("no nodes found for the Kafka Cluster");
+                result = HEALTH_RESULT_ERROR;
+            }
+
+            if (!clusterIdAvailable) {
+                logger.error("no cluster id available for the Kafka Cluster");
+                result = HEALTH_RESULT_ERROR;
+            }
+
+            if (!controllerExists) {
+                logger.error("no active controller exists for the Kafka Cluster");
+                result = HEALTH_RESULT_ERROR;
+            }
+        } catch (Exception e) {
+            logger.error("Error describing Kafka Cluster", e);
             result = HEALTH_RESULT_ERROR;
         }
         return result;
