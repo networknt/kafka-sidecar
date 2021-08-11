@@ -48,6 +48,8 @@ public class SidecarHealthHandler implements LightHttpHandler {
     public static final String HEALTH_RESULT_ERROR = "ERROR";
     static final Logger logger = LoggerFactory.getLogger(SidecarHealthHandler.class);
     static final HealthConfig config = (HealthConfig) Config.getInstance().getJsonObjectConfig(HealthConfig.CONFIG_NAME, HealthConfig.class);
+    // cached connection to the backend API to speed up the downstream check.
+    static ClientConnection connection = null;
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -82,6 +84,8 @@ public class SidecarHealthHandler implements LightHttpHandler {
                         result = kafkaHealth();
                     }
                 }
+                // if there is any error in the loop, don't need to check further.
+                if(result.equals(HEALTH_RESULT_ERROR)) break;
             }
         } else {
             logger.error("No startup hook is defined and none of the component is enabled.");
@@ -105,7 +109,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
      */
     private String backendHealth() {
         String result = HEALTH_RESULT_OK;
-        ClientConnection connection = ReactiveConsumerStartupHook.connection;
+        long start = System.currentTimeMillis();
         if(connection == null || !connection.isOpen()) {
             try {
                 if(config.getDownstreamHost().startsWith("https")) {
@@ -124,7 +128,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
             ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
             request.getRequestHeaders().put(Headers.HOST, "localhost");
             connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
-            latch.await();
+            latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
             int statusCode = reference.get().getResponseCode();
             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
             if(logger.isDebugEnabled()) logger.debug("statusCode = " + statusCode + " body  = " + body);
@@ -137,6 +141,8 @@ public class SidecarHealthHandler implements LightHttpHandler {
             logger.error("Error while sending a health check request to the backend with exception: ", exception);
             result = HEALTH_RESULT_ERROR;
         }
+        long responseTime = System.currentTimeMillis() - start;
+        if(logger.isDebugEnabled()) logger.debug("Downstream health check response time = " + responseTime);
         return result;
     }
 
