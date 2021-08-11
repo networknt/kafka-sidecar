@@ -77,7 +77,7 @@ maxPort: ${server.maxPort:2500}
 # environment tag that will be registered on consul to support multiple instances per env for testing.
 # https://github.com/networknt/light-doc/blob/master/docs/content/design/env-segregation.md
 # This tag should only be set for testing env, not production. The production certification process will enforce it.
-# environment: ${server.environment:test1}
+environment: ${server.environment:dev-kafka}
 
 # Build Number, to be set by teams for auditing or tracing purposes. 
 # Allows teams to audit the value and set it according to their release management process
@@ -115,4 +115,4 @@ buildNumber: ${server.buildNumber:1.0.0}
 # allowUnescapedCharactersInUrl: ${server.allowUnescapedCharactersInUrl:false}
 
 # Set the max transfer file size for uploading files. Default to 1000000 which is 1 MB.
-# maxTransferFileSize: ${server.maxTransferFileSize:1000000}
+maxTransferFileSize: ${server.maxTransferFileSize:1000000}

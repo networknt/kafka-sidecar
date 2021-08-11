@@ -3,7 +3,6 @@ package com.networknt.mesh.kafka;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.kafka.entity.AuditRecord;
-import com.networknt.utility.Constants;
 import com.networknt.utility.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

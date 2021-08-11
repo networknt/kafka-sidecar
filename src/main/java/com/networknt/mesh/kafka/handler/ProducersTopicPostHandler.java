@@ -169,8 +169,8 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                         auditRecords.clear();
                     }
                 }
-                if(logger.isInfoEnabled()) {
-                    logger.info("ProducerTopicPostHandler handleRequest produce to Kafka in " + (System.currentTimeMillis() - start));
+                if(logger.isDebugEnabled()) {
+                    logger.debug("ProducerTopicPostHandler handleRequest produce to Kafka in " + (System.currentTimeMillis() - start));
                 }
                 exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
                 exchange.getResponseSender().send(JsonMapper.toJson(response));
