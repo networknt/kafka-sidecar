@@ -66,13 +66,14 @@ public class SidecarHealthHandler implements LightHttpHandler {
                     }
                 }
                 if(p instanceof ReactiveConsumerStartupHook) {
-                    // reactive consumer is enabled, need to check backend connection as well.
-                    if(ReactiveConsumerStartupHook.kafkaConsumerManager == null) {
-                        logger.error("ReactiveConsumer is enabled but it is not connected to the Kafka cluster.");
+                    // reactive consumer is enabled, but consumer manager is null or the healthy is false, return error.
+                    if(ReactiveConsumerStartupHook.kafkaConsumerManager == null || !ReactiveConsumerStartupHook.healthy) {
+                        logger.error("ReactiveConsumer is enabled but it is not connected to the Kafka cluster or it is marked as unhealthy.");
                         result = HEALTH_RESULT_ERROR;
                     }
                     // if backend is not connected, then error. Check the configuration to see if it is enabled.
-                    if(config.isDownstreamEnabled()) {
+                    // skip this check if the result is an error already.
+                    if(HEALTH_RESULT_OK.equals(result) && config.isDownstreamEnabled()) {
                         result = backendHealth();
                     }
                 }
