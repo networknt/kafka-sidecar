@@ -37,6 +37,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
     private static Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     public static KafkaConsumerManager kafkaConsumerManager;
+    public static boolean healthy = true;
     public static Http2Client client = Http2Client.getInstance();
     public static ClientConnection connection;
     static private ExecutorService executor = newSingleThreadExecutor();
@@ -136,7 +137,16 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
                     ) {
                         if (e != null) {
                             if(logger.isDebugEnabled()) logger.debug("FrameworkException:", e);
+                            // we need to set a state of failure if unexpected exception happens.
+                            if(KafkaConsumerReadTask.UNEXPECTED_CONSUMER_READ_EXCEPTION.equals(e.getStatus().getCode())) {
+                                // set active consumer healthy to false in order to restart the container/pod.
+                                healthy = false;
+                            }
                         } else {
+                            // reset the healthy status to true if onCompletion returns data without exception for another try.
+                            // this will ensure that k8s probe won't restart the pod by only one exception. It will only restart
+                            // the pod when there are multiple health check failures in a row.
+                            if(!healthy) healthy = true;
                             if(records.size() > 0) {
                                 if(logger.isDebugEnabled()) logger.debug("polled records size = " + records.size());
                                 if(connection == null || !connection.isOpen()) {
