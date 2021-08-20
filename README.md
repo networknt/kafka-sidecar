@@ -50,7 +50,22 @@ The reverse proxy has the following features:
 * Service registry and discovery with Consul or Zookeeper
 * Manage configuration with light-config-server
 
-To learn how to use this proxy, pleases refer to 
+## Local environment test.
+
+kafka sidecar normally is used for deploying as a separate sidecar container for kubernetes cluster. But we still can verify it locally.
+
+Click [here](https://doc.networknt.com/tutorial/kafka-sidecar/local-dev/#reactive-consumer) for local test detil.
+
+If the evnironment is windows OS, we can start confluent kafka docker-compose for testing:
+
+```
+cd kafka-sidecar
+docker-compose up -d
+```
+
+---
+
+### To learn how to use this proxy, pleases refer to 
 
 * [Getting Started](https://doc.networknt.com/getting-started/light-proxy/) to learn core concepts
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
