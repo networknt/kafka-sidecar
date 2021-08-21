@@ -301,7 +301,7 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                                                         record.getKey().orElse(NullNode.getInstance()),
                                                         /* isKey= */ true) :
                                         noSchemaRecordSerializer
-                                                .serialize(keyFormat.orElse(EmbeddedFormat.BINARY), record.getKey().orElse(NullNode.getInstance())),
+                                                .serialize(keyFormat.orElse(EmbeddedFormat.valueOf(config.getKeyFormat().toUpperCase())), record.getKey().orElse(NullNode.getInstance())),
                                         valueFormat.isPresent() && valueFormat.get().requiresSchema() ?
                                         schemaRecordSerializer
                                                 .serialize(
@@ -310,7 +310,7 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                                                         valueSchema,
                                                         record.getValue().orElse(NullNode.getInstance()),
                                                         /* isKey= */ false) :
-                                        noSchemaRecordSerializer.serialize(valueFormat.orElse(EmbeddedFormat.BINARY), record.getValue().orElse(NullNode.getInstance())))
+                                        noSchemaRecordSerializer.serialize(valueFormat.orElse(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())), record.getValue().orElse(NullNode.getInstance())))
                 )
                 .collect(Collectors.toList());
     }
