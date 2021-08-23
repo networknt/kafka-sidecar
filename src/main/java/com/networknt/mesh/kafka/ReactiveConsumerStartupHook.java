@@ -57,7 +57,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
         groupId = (String)config.getProperties().get("group.id");
-        CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(null, null, config.getValueFormat(), null, null, null, null);
+        CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(null, null, config.getKeyFormat(), config.getValueFormat(), null, null, null, null);
         instanceId = kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
 
         String topic = config.getTopic();
@@ -88,25 +88,10 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         public void run() {
             while (!done) {
                 readyForNextBatch = false;
-                switch(config.getValueFormat()) {
-                    case "binary":
-                        readRecords(
-                                BinaryKafkaConsumerState.class,
-                                BinaryConsumerRecord::fromConsumerRecord);
-                        break;
-                    case "json":
-                        readRecords(
-                                JsonKafkaConsumerState.class,
-                                JsonConsumerRecord::fromConsumerRecord);
-                        break;
-                    case "avro":
-                    case "jsonschema":
-                    case "protobuf":
-                        readRecords(
-                                SchemaKafkaConsumerState.class,
-                                SchemaConsumerRecord::fromConsumerRecord);
-                        break;
-                }
+                readRecords(
+                        KafkaConsumerState.class,
+                        SidecarConsumerRecord::fromConsumerRecord);
+
                 while(!readyForNextBatch) {
                     // wait until the previous batch returns.
                     try {
@@ -122,7 +107,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
     }
 
     private <KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT> void readRecords(
-            Class<? extends KafkaConsumerState<KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT>>
+            Class<KafkaConsumerState>
                     consumerStateType,
             Function<com.networknt.kafka.entity.ConsumerRecord<ClientKeyT, ClientValueT>, ?> toJsonWrapper
     ) {
