@@ -13,6 +13,15 @@ properties:
   linger.ms: ${kafka-producer.linger.ms:1}
   max.in.flight.requests.per.connection: ${kafka-producer.max.in.flight.requests.per.connection:5}
   enable.idempotence: ${kafka-producer.enable.idempotence:true}
+  # Transactional producer configuration
+  # The TransactionalId to use for transactional delivery.
+  # transactional.id: ${kafka-producer.transactional.id:T1000}
+  # The maximum amount of time in ms that the transaction coordinator will wait for a transaction status
+  # update from the producer before proactively aborting the ongoing transaction. Default to 1 minute.
+  # transaction.timeout.ms: ${kafka-producer.transaction.timeout.ms:60000}
+  # The time in ms that the transaction coordinator will wait without receiving any transaction status
+  # updates for the current transaction before expiring its transactional id. Default to 7 days.
+  # transactional.id.expiration.ms: ${kafka-producer.transactional.id.expiration.ms:604800000}
   # Confluent schema registry url
   schema.registry.url: ${kafka-producer.schema.registry.url:http://localhost:8081}
   # Schema registry identity cache size
@@ -36,9 +45,9 @@ properties:
 # The default topic for the producer. Only certain producer implementation will use it.
 topic: ${kafka-producer.topic:test1}
 # Default key format if no schema for the topic key
-keyFormat: jsonschema
+keyFormat: ${kafka-producer.keyFormat:jsonschema}
 # Default value format if no schema for the topic value
-valueFormat: jsonschema
+valueFormat: ${kafka-producer.valueFormat:jsonschema}
 # If open tracing is enable. traceability, correlation and metrics should not be in the chain if opentracing is used.
 injectOpenTracing: ${kafka-producer.injectOpenTracing:false}
 # Inject serviceId as callerId into the http header for metrics to collect the caller. The serviceId is from server.yml
