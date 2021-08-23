@@ -4,10 +4,8 @@ import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.kafka.consumer.*;
-import com.networknt.kafka.entity.BinaryConsumerRecord;
 import com.networknt.kafka.entity.ConsumerRecord;
-import com.networknt.kafka.entity.JsonConsumerRecord;
-import com.networknt.kafka.entity.SchemaConsumerRecord;
+import com.networknt.kafka.entity.SidecarConsumerRecord;
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
@@ -46,41 +44,16 @@ public class ConsumersGroupInstancesInstanceRecordsGetHandler implements LightHt
         if(dequeMaxBytes != null) {
             maxBytes = Long.valueOf(dequeMaxBytes.getFirst());
         }
-        String format = exchange.getQueryParameters().get("format").getFirst();
-        switch(format) {
-            case "binary":
-                readRecords(
-                        exchange,
-                        group,
-                        instance,
-                        Duration.ofMillis(timeoutMs),
-                        maxBytes,
-                        BinaryKafkaConsumerState.class,
-                        BinaryConsumerRecord::fromConsumerRecord);
-                break;
-            case "json":
-                readRecords(
-                        exchange,
-                        group,
-                        instance,
-                        Duration.ofMillis(timeoutMs),
-                        maxBytes,
-                        JsonKafkaConsumerState.class,
-                        JsonConsumerRecord::fromConsumerRecord);
-                break;
-            case "avro":
-            case "jsonschema":
-            case "protobuf":
-                readRecords(
-                        exchange,
-                        group,
-                        instance,
-                        Duration.ofMillis(timeoutMs),
-                        maxBytes,
-                        SchemaKafkaConsumerState.class,
-                        SchemaConsumerRecord::fromConsumerRecord);
-                break;
-        }
+        // String format = exchange.getQueryParameters().get("format").getFirst();
+        // TODO find a way to overwrite the default configuration for the keyFormat and valueFormat from the query parameters.
+        readRecords(
+                exchange,
+                group,
+                instance,
+                Duration.ofMillis(timeoutMs),
+                maxBytes,
+                KafkaConsumerState.class,
+                SidecarConsumerRecord::fromConsumerRecord);
     }
 
     private <KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT> void readRecords(
@@ -89,7 +62,7 @@ public class ConsumersGroupInstancesInstanceRecordsGetHandler implements LightHt
             String instance,
             Duration timeout,
             long maxBytes,
-            Class<? extends KafkaConsumerState<KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT>>
+            Class<KafkaConsumerState>
                     consumerStateType,
             Function<ConsumerRecord<ClientKeyT, ClientValueT>, ?> toJsonWrapper
     ) {
