@@ -31,7 +31,7 @@ public class ConsumersGroupInstancesInstancePositionsFirstPostHandler implements
         ConsumerSeekToRequest request = Config.getInstance().getMapper().convertValue(map, ConsumerSeekToRequest.class);
         if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance + " request = " + request);
         try {
-            ActiveConsumerStartupHook.kafkaConsumerManager.seekToEnd(group, instance, request);
+            ActiveConsumerStartupHook.kafkaConsumerManager.seekToBeginning(group, instance, request);
             exchange.setStatusCode(204);
             exchange.endExchange();
         } catch (FrameworkException e) {
