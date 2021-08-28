@@ -12,8 +12,6 @@ services:
     hostname: kafka-sidecar
     network_mode: host
     container_name: kafka-sidecar
-    environment:
-      DOCKER_HOST_IP: ${DOCKER_HOST_IP}
 
   sidecar-backend:
     image: networknt/sidecar-backend-1.0.0:2.0.30
@@ -22,5 +20,3 @@ services:
     hostname: sidecar-backend
     network_mode: host
     container_name: sidecar-backend
-    environment:
-      DOCKER_HOST_IP: ${DOCKER_HOST_IP}
