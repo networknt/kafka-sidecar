@@ -1,11 +1,11 @@
 # producer format configuration
-kafka-producer.bootstrap.servers: ${DOCKER_HOST_IP}:9092
+kafka-producer.bootstrap.servers: localhost:9092
 kafka-producer.schema.registry.url: http://localhost:8081
 kafka-producer.keyFormat: binary
 kafka-producer.valueFormat: string
 
 # consumer format configuration
-kafka-consumer.bootstrap.servers: ${DOCKER_HOST_IP}:9092
+kafka-consumer.bootstrap.servers: localhost:9092
 kafka-consumer.schema.registry.url: http://localhost:8081
 kafka-consumer.backendApiHost: https://localhost:8444
 kafka-consumer.topic: test6
