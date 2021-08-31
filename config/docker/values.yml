@@ -1,0 +1,27 @@
+# producer format configuration
+kafka-producer.bootstrap.servers: localhost:9092
+kafka-producer.schema.registry.url: http://localhost:8081
+kafka-producer.keyFormat: binary
+kafka-producer.valueFormat: string
+
+# consumer format configuration
+kafka-consumer.bootstrap.servers: localhost:9092
+kafka-consumer.schema.registry.url: http://localhost:8081
+kafka-consumer.backendApiHost: https://localhost:8444
+kafka-consumer.topic: test6
+kafka-consumer.keyFormat: binary
+kafka-consumer.valueFormat: string
+
+# Service Startup and Shutdown Hooks
+service.com.networknt.server.StartupHookProvider:
+  - com.networknt.mesh.kafka.ProducerStartupHook
+  # - com.networknt.mesh.kafka.ActiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.KsqldbConsumerStartupHook
+  - com.networknt.mesh.kafka.ReactiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.AdminClientStartupHook
+service.com.networknt.server.ShutdownHookProvider:
+  - com.networknt.mesh.kafka.ProducerShutdownHook
+  # - com.networknt.mesh.kafka.ActiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.KsqldbConsumerShutdownHook
+  - com.networknt.mesh.kafka.ReactiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.AdminClientShutdownHook
