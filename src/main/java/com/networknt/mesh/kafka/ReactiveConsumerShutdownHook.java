@@ -9,11 +9,11 @@ public class ReactiveConsumerShutdownHook implements ShutdownHookProvider {
 
     @Override
     public void onShutdown() {
-        logger.debug("ReactiveConsumerShutdownHook begins");
+        logger.info("ReactiveConsumerShutdownHook begins");
         if(ReactiveConsumerStartupHook.kafkaConsumerManager != null) {
             ReactiveConsumerStartupHook.kafkaConsumerManager.shutdown();
         }
-        logger.debug("ReactiveConsumerShutdownHook ends");
+        logger.info("ReactiveConsumerShutdownHook ends");
     }
 
 }

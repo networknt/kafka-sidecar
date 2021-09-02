@@ -9,10 +9,10 @@ public class AdminClientShutdownHook  implements ShutdownHookProvider {
 
     @Override
     public void onShutdown() {
-        logger.debug("AdminClientShutdownHook begins");
+        logger.info("AdminClientShutdownHook begins");
         if(AdminClientStartupHook.admin != null) {
             AdminClientStartupHook.admin.close();;
         }
-        logger.debug("AdminClientShutdownHook ends");
+        logger.info("AdminClientShutdownHook ends");
     }
 }
