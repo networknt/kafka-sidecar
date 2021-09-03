@@ -9,10 +9,10 @@ public class ActiveConsumerShutdownHook implements ShutdownHookProvider {
 
     @Override
     public void onShutdown() {
-        logger.debug("ActiveConsumerShutdownHook begins");
+        logger.info("ActiveConsumerShutdownHook begins");
         if(ActiveConsumerStartupHook.kafkaConsumerManager != null) {
             ActiveConsumerStartupHook.kafkaConsumerManager.shutdown();
         }
-        logger.debug("ActiveConsumerShutdownHook ends");
+        logger.info("ActiveConsumerShutdownHook ends");
     }
 }

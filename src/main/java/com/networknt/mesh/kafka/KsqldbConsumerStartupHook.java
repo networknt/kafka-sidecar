@@ -16,7 +16,7 @@ public class KsqldbConsumerStartupHook implements StartupHookProvider {
 
     @Override
     public void onStartup() {
-        logger.debug("KsqldbConsumerStartupHook begins");
+        logger.info("KsqldbConsumerStartupHook begins");
         ClientOptions options = ClientOptions.create()
                 .setHost(config.getKsqldbHost())
                 .setPort(config.getKsqldbPort());
@@ -35,6 +35,6 @@ public class KsqldbConsumerStartupHook implements StartupHookProvider {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        logger.debug("KsqldbConsumerStartupHook ends");
+        logger.info("KsqldbConsumerStartupHook ends");
     }
 }
