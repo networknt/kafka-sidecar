@@ -9,6 +9,7 @@ import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
 import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
+import com.networknt.utility.Constants;
 import com.networknt.utility.ModuleRegistry;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
@@ -237,8 +238,19 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         auditRecord.setTopic(result.getRecord().getTopic());
         auditRecord.setPartition(result.getRecord().getPartition());
         auditRecord.setOffset(result.getRecord().getOffset());
-        auditRecord.setCorrelationId((String)result.getRecord().getHeaders().get("X-Correlation-Id"));
-        auditRecord.setTraceabilityId((String)result.getRecord().getHeaders().get("X-Traceability-Id"));
+        String correlationId = null;
+        String traceabilityId = null;
+        Map<String, String> headers = result.getRecord().getHeaders();
+        if(headers != null) {
+            correlationId = headers.get(Constants.CORRELATION_ID_STRING);
+            if(correlationId == null) correlationId = result.getCorrelationId();
+            traceabilityId = headers.get(Constants.TRACEABILITY_ID_STRING);
+            if(traceabilityId == null) traceabilityId = result.getTraceabilityId();
+        } else {
+            correlationId = result.getCorrelationId();
+            traceabilityId = result.getTraceabilityId();
+        }
+        auditRecord.setKey(result.getKey());
         auditRecord.setAuditStatus(result.isProcessed() ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(config.getAuditTarget())) {
             ProducerStartupHook.producer.send(
