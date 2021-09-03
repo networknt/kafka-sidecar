@@ -13,9 +13,9 @@ public class AdminClientStartupHook implements StartupHookProvider {
     public static Admin admin;
     @Override
     public void onStartup() {
-        logger.debug("AdminClientStartupHook begins");
+        logger.info("AdminClientStartupHook begins");
         admin = Admin.create(config.getProperties());
-        logger.debug("AdminClientStartupHook ends");
+        logger.info("AdminClientStartupHook ends");
     }
 
 }

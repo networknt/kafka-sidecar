@@ -12,10 +12,10 @@ public class ProducerStartupHook implements StartupHookProvider {
     public static Producer producer;
     @Override
     public void onStartup() {
-        logger.debug("ProducerStartupHook begins");
+        logger.info("ProducerStartupHook begins");
         NativeLightProducer lightProducer = SingletonServiceFactory.getBean(NativeLightProducer.class);
         lightProducer.open();
         producer = lightProducer.getProducer();
-        logger.debug("ProducerStartupHook ends");
+        logger.info("ProducerStartupHook ends");
     }
 }

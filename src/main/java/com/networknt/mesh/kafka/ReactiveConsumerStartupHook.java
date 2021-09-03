@@ -53,7 +53,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
 
     @Override
     public void onStartup() {
-        logger.debug("ReactiveConsumerStartupHook begins");
+        logger.info("ReactiveConsumerStartupHook begins");
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
         groupId = (String)config.getProperties().get("group.id");
@@ -75,7 +75,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
         ModuleRegistry.registerModule(ReactiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaConsumerConfig.CONFIG_NAME), masks);
-        logger.debug("ReactiveConsumerStartupHook ends");
+        logger.info("ReactiveConsumerStartupHook ends");
     }
 
     private void runConsumer() {

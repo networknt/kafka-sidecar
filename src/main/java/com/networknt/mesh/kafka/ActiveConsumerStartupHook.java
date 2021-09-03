@@ -25,7 +25,7 @@ public class ActiveConsumerStartupHook implements StartupHookProvider {
     public static KafkaConsumerManager kafkaConsumerManager;
     @Override
     public void onStartup() {
-        logger.debug("ActiveConsumerStartupHook begins");
+        logger.info("ActiveConsumerStartupHook begins");
         KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
         kafkaConsumerManager = new KafkaConsumerManager(config);
         // register the module with the configuration properties.
@@ -33,6 +33,6 @@ public class ActiveConsumerStartupHook implements StartupHookProvider {
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
         ModuleRegistry.registerModule(ActiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaConsumerConfig.CONFIG_NAME), masks);
-        logger.debug("ActiveConsumerStartupHook ends");
+        logger.info("ActiveConsumerStartupHook ends");
     }
 }
