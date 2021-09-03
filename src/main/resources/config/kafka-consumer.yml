@@ -61,7 +61,7 @@ valueFormat: ${kafka-consumer.valueFormat:jsonschema}
 # Waiting period in millisecond to poll another batch
 waitPeriod: ${kafka-consumer.waitPeriod:100}
 # Backend API host
-backendApiHost: ${kafka-consumer.backendApiHost:http://localhost:8080}
+backendApiHost: ${kafka-consumer.backendApiHost:https://localhost:8444}
 # Backend API path
 backendApiPath: ${kafka-consumer.backendApiPath:/kafka/records}
 
