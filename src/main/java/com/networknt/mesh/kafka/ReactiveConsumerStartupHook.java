@@ -250,6 +250,8 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
             correlationId = result.getCorrelationId();
             traceabilityId = result.getTraceabilityId();
         }
+        auditRecord.setCorrelationId(correlationId);
+        auditRecord.setTraceabilityId(traceabilityId);
         auditRecord.setKey(result.getKey());
         auditRecord.setAuditStatus(result.isProcessed() ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(config.getAuditTarget())) {
@@ -258,7 +260,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
                             config.getAuditTopic(),
                             null,
                             System.currentTimeMillis(),
-                            auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8),
+                            auditRecord.getCorrelationId() != null ? auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey(),
                             JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
                             null),
                     (metadata, exception) -> {
