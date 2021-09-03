@@ -538,7 +538,46 @@ paths:
       security:
         - kafka_auth:
             - kafka:r
-
+  '/replay/dlq/records':
+    get:
+      operationId: replayDLTopicData
+      summary: replay the message in the DLQ APIs
+      parameters:
+        - name: group
+          in: query
+          required: false
+          description: The consumer group name
+          schema:
+            type: string
+        - name: topic
+          in: query
+          required: false
+          description: The topic name which need replay deal letter queue group name
+          schema:
+            type: string
+        - name: timeout
+          in: query
+          description: Maximum amount of milliseoncds the sidecar will spend fetching records
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeadLetterQueueReplayResponse"
+        '404':
+          description: Consumer instance not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+      security:
+        - kafka_auth:
+            - kafka:r
+            - kafka:w
 components:
   securitySchemes:
     kafka_auth:
@@ -557,12 +596,12 @@ components:
         keyFormat:
           type: integer
           enum: [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
           ]
         keySchema:
           type: string
@@ -575,12 +614,12 @@ components:
         valueFormat:
           type: integer
           enum: [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
           ]
         valueSchema:
           type: string
@@ -648,7 +687,21 @@ components:
           type: number
         metadata:
           type: string
-
+    DeadLetterQueueReplayResponse:
+      type: object
+      properties:
+        group:
+          type: string
+        instance:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        records:
+          type: number
+        description:
+          type: string
     ConsumerCommittedResponse:
       type: object
       properties:
