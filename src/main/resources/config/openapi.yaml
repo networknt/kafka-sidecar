@@ -538,10 +538,56 @@ paths:
       security:
         - kafka_auth:
             - kafka:r
-  '/replay/dlq/records':
+  '/deadLetters/reactive':
     get:
-      operationId: replayDLTopicData
-      summary: replay the message in the DLQ APIs
+      operationId: DLTopicReplayReactive
+      summary: replay the message in the DLQ APIs by reactive consumer
+      parameters:
+        - name: group
+          in: query
+          required: false
+          description: The consumer group name
+          schema:
+            type: string
+        - name: topic
+          in: query
+          required: false
+          description: The topic name which need replay deal letter queue group name
+          schema:
+            type: string
+        - name: timeout
+          in: query
+          description: Maximum amount of milliseoncds the sidecar will spend fetching records
+          required: false
+          schema:
+            type: integer
+        - name: lastretry
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: If the certificate for an HTTPS check should not be verified.
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/DeadLetterQueueReplayResponse"
+        '404':
+          description: Consumer instance not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+      security:
+        - kafka_auth:
+            - kafka:r
+            - kafka:w
+  '/deadLetters/active':
+    get:
+      operationId: DLTopicReplayAactive
+      summary: replay the message in the DLQ APIs by active consumer
       parameters:
         - name: group
           in: query
@@ -567,7 +613,9 @@ paths:
           content:
             application/json:
               schema:
-                "$ref": "#/components/schemas/DeadLetterQueueReplayResponse"
+                type: array
+                items:
+                  $ref: '#/components/schemas/ConsumerRecord'
         '404':
           description: Consumer instance not found
           content:
@@ -642,7 +690,16 @@ components:
           type: string
         name:
           type: string
-        format:
+        keyFormat:
+          type: string
+          enum:
+            - binary
+            - avro
+            - json
+            - jsonschema
+            - protobuf
+            - string
+        valueFormat:
           type: string
           enum:
             - binary

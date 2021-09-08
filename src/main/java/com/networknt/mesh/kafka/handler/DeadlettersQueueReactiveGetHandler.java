@@ -38,17 +38,18 @@ import java.util.stream.Collectors;
 For more information on how to write business handlers, please check the link below.
 https://doc.networknt.com/development/business-handler/rest/
 */
-public class ReplayDeadLetterTopicGetHandler implements LightHttpHandler {
-    private static final Logger logger = LoggerFactory.getLogger(ReplayDeadLetterTopicGetHandler.class);
+public class DeadlettersQueueReactiveGetHandler implements LightHttpHandler {
+    private static final Logger logger = LoggerFactory.getLogger(DeadlettersQueueReactiveGetHandler.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
-  //  public static KafkaConsumerManager kafkaConsumerManager;
     long maxBytes = -1;
     public static ClientConnection connection;
     public static Http2Client client = Http2Client.getInstance();
     private static String UNEXPECTED_CONSUMER_READ_EXCEPTION = "ERR12205";
-    private static String REPLAY_DEFAULT_INSTANCE = "Replay-1289990";
+    private static String INVALID_TOPIC_NAME = "ERR30001";
+    private static String REPLAY_DEFAULT_INSTANCE = "Reactive-Replay-1289990";
+    private  boolean lastRetry = false;
 
-    public ReplayDeadLetterTopicGetHandler() {
+    public DeadlettersQueueReactiveGetHandler() {
         if(logger.isDebugEnabled()) logger.debug("ReplayDeadLetterTopicGetHandler constructed!");
     }
 
@@ -63,20 +64,43 @@ public class ReplayDeadLetterTopicGetHandler implements LightHttpHandler {
             instanceId = ReactiveConsumerStartupHook.kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
         }
 
+        if (exchange.getQueryParameters().get("lastretry")!=null) {
+            lastRetry = Boolean.parseBoolean(exchange.getQueryParameters().get("lastretry").getFirst());
+        }
+
         Deque<String> dequeTimeout = exchange.getQueryParameters().get("timeout");
         long timeoutMs = -1;
         if(dequeTimeout != null) {
             timeoutMs = Long.valueOf(dequeTimeout.getFirst());
         }
-        String topic = exchange.getQueryParameters().get("topic")==null? config.getTopic() : exchange.getQueryParameters().get("topic").getFirst();
-        ConsumerSubscriptionRecord subscription;
-        if(topic.contains(",")) {
-            // remove the whitespaces
-            topic = topic.replaceAll("\\s+","");
-            subscription = new ConsumerSubscriptionRecord(Arrays.asList(topic.split(",", -1)).stream().map(t->t + config.getDeadLetterTopicExt()).collect(Collectors.toList()), null);
+        String topic;
+        String configTopic = config.getTopic();
+        List<String> configTopics;
+        if(configTopic.contains(",")) {
+            configTopic = configTopic.replaceAll("\\s+","");
+            configTopics = Arrays.asList(configTopic.split(",", -1));
         } else {
-            subscription = new ConsumerSubscriptionRecord(Collections.singletonList(topic + config.getDeadLetterTopicExt()), null);
+            configTopics = Collections.singletonList(configTopic);
         }
+        List<String> topics;
+        if (exchange.getQueryParameters().get("topic")==null) {
+            topics = configTopics;
+        } else {
+            topic = exchange.getQueryParameters().get("topic").getFirst();
+            if(topic.contains(",")) {
+                topic = topic.replaceAll("\\s+","");
+                topics = Arrays.asList(topic.split(",", -1));
+            } else {
+                topics = Collections.singletonList(topic);
+            }
+            if (!configTopics.containsAll(topics)) {
+                setExchangeStatus(exchange, INVALID_TOPIC_NAME);
+                return;
+            }
+        }
+     //   String topic = exchange.getQuer(Arrays.asListyParameters().get("topic")==null? config.getTopic() : exchange.getQueryParameters().get("topic").getFirst();
+        ConsumerSubscriptionRecord subscription;
+        subscription = new ConsumerSubscriptionRecord(topics.stream().map(t->t + config.getDeadLetterTopicExt()).collect(Collectors.toList()), null);
         ReactiveConsumerStartupHook.kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
 
         exchange.dispatch();
@@ -208,8 +232,7 @@ public class ReplayDeadLetterTopicGetHandler implements LightHttpHandler {
             List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
             for(int i = 0; i < results.size(); i ++) {
                 RecordProcessedResult result = Config.getInstance().getMapper().convertValue(results.get(i), RecordProcessedResult.class);
-                result.setRetried(result.getRetried()+1);
-                if(config.isDeadLetterEnabled() && !result.isProcessed() && result.getRetried()<config.getDeadLetterMessageRetry()) {
+                if(config.isDeadLetterEnabled() && !result.isProcessed() && !lastRetry) {
                     ProducerStartupHook.producer.send(
                             new ProducerRecord<>(
                                     result.getRecord().getTopic() + config.getDeadLetterTopicExt(),
