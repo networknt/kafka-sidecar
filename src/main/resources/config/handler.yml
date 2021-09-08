@@ -78,7 +78,8 @@ handlers:
   - com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstancePositionsFirstPostHandler
   - com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstancePositionsLastPostHandler
   - com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler
-  - com.networknt.mesh.kafka.handler.ReplayDeadLetterTopicGetHandler
+  - com.networknt.mesh.kafka.handler.DeadlettersQueueReactiveGetHandler
+  - com.networknt.mesh.kafka.handler.DeadlettersQueueActiveGetHandler
 
 chains:
   default:
@@ -165,12 +166,16 @@ paths:
     exec:
       - default
       - com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler
-  - path: '/replay/dlq/records'
+  - path: '/deadLetters/reactive'
     method: 'GET'
     exec:
       - default
-      - com.networknt.mesh.kafka.handler.ReplayDeadLetterTopicGetHandler
-
+      - com.networknt.mesh.kafka.handler.DeadlettersQueueReactiveGetHandler
+  - path: '/deadLetters/active'
+    method: 'GET'
+    exec:
+      - default
+      - com.networknt.mesh.kafka.handler.DeadlettersQueueActiveGetHandler
   # k8s liveness probe without security
   - path: '/health/liveness'
     method: 'get'

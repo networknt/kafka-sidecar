@@ -4,6 +4,7 @@ import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.CreateConsumerInstanceRequest;
 import com.networknt.kafka.entity.CreateConsumerInstanceResponse;
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
@@ -20,6 +21,10 @@ https://doc.networknt.com/development/business-handler/rest/
 */
 public class ConsumersGroupPostHandler implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupPostHandler.class);
+    private final KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    private static final String KEY_FORMAT = "keyFormat";
+    private static final String VALUE_FORMAT = "valueFormat";
+
     public ConsumersGroupPostHandler () {
         if(logger.isDebugEnabled()) logger.debug("ConsumersGroupPostHandler constructed!");
     }
@@ -29,6 +34,12 @@ public class ConsumersGroupPostHandler implements LightHttpHandler {
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String group = exchange.getPathParameters().get("group").getFirst();
         Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
+        if (map.get(KEY_FORMAT) == null) {
+            map.put(KEY_FORMAT, config.getKeyFormat());
+        }
+        if (map.get(VALUE_FORMAT) == null) {
+            map.put(VALUE_FORMAT, config.getValueFormat());
+        }
         CreateConsumerInstanceRequest request = Config.getInstance().getMapper().convertValue(map, CreateConsumerInstanceRequest.class);
         if(logger.isDebugEnabled()) logger.debug("group = " + group + " request = " + request);
         String instanceId = ActiveConsumerStartupHook.kafkaConsumerManager.createConsumer(group, request.toConsumerInstanceConfig());

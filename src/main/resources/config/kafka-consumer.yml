@@ -38,8 +38,7 @@ properties:
 deadLetterEnabled: ${kafka-consumer.deadLetterEnabled:true}
 # The extension of the dead letter queue(topic) that is added to the original topic to form the dead letter topic
 deadLetterTopicExt: ${kafka-consumer.deadLetterTopicExt:.dlq}
-# The message replay for Dead letter queue could fail again. Define max times it could replay
-deadLetterMessageRetry: ${kafka-consumer.deadLetterMessageRetry:3}
+
 # Indicator if the audit is enabled.
 auditEnabled: ${kafka-consumer.auditEnabled:true}
 # Audit log destination topic or logfile. Default to topic
