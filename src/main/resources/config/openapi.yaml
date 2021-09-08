@@ -644,12 +644,12 @@ components:
         keyFormat:
           type: integer
           enum: [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
           ]
         keySchema:
           type: string
@@ -662,12 +662,12 @@ components:
         valueFormat:
           type: integer
           enum: [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
+            0,
+            1,
+            2,
+            3,
+            4,
+            5
           ]
         valueSchema:
           type: string
