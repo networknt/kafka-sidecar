@@ -10,11 +10,11 @@ properties:
   # Request timeout in milliseconds. It must be set to a short duration for health check
   request.timeout.ms: ${kafka-admin.request.timeout.ms:200}
   # security configuration for enterprise deployment
-  security.protocol: ${kafka-admin.security.protocol:SASL_SSL}
-  sasl.mechanism: ${kafka-admin.sasl.mechanism:PLAIN}
-  sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-admin.username:username}\" password=\"${KAFKA_ADMIN_PASSWORD:password}\";"
-  ssl.endpoint.identification.algorithm: ${kafka-admin.ssl.endpoint.identification.algorithm:algo-name}
-  client.rack: ${kafka-admin.client.rack:rack-name}
+  # security.protocol: ${kafka-admin.security.protocol:SASL_SSL}
+  # sasl.mechanism: ${kafka-admin.sasl.mechanism:PLAIN}
+  # sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-admin.username:username}\" password=\"${kafka-admin.password:password}\";"
+  # ssl.endpoint.identification.algorithm: ${kafka-admin.ssl.endpoint.identification.algorithm:algo-name}
+  # client.rack: ${kafka-admin.client.rack:rack-name}
   # basic authentication user:pass for the schema registry
-  basic.auth.user.info: ${kafka-admin.username:username}:${KAFKA_ADMIN_PASSWORD:password}
-  basic.auth.credentials.source: ${kafka-admin.basic.auth.credentials.source:USER_INFO}
+  # basic.auth.user.info: ${kafka-admin.username:username}:${kafka-admin.password:password}
+  # basic.auth.credentials.source: ${kafka-admin.basic.auth.credentials.source:USER_INFO}
