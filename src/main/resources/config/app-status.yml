@@ -22,3 +22,9 @@ ERR30001:
   code: ERR30001
   message: INVALID_TOPIC_NAME
   description: This is invalid topic name for reactive consumer to replay. It doesn't march the topics in the kafka-comsumer.yml config.
+
+ERR30002:
+  statusCode: 400
+  code: ERR30002
+  message:  KSQL_IMPLEMENTATION_ERROR
+  description: This is invalid KSQL query to run, please verify the query type(pull/push) and query body.
