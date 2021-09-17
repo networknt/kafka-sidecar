@@ -126,7 +126,7 @@ Sample request payload:
     "deserializationError": false,
     "queryType": "pull",
      "tableScanEnable": true,
-    "query": "select * from QUERYUSER1;"
+    "query": "select * from QUERYUSER;"
 }
 
 ```
