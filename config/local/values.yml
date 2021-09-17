@@ -1,10 +1,11 @@
 # producer format configuration
-kafka-producer.keyFormat: string
-kafka-producer.valueFormat: jsonschema
+kafka-producer.keyFormat: binary
+kafka-producer.valueFormat: string
 
 # consumer format configuration
-kafka-consumer.keyFormat: string
-kafka-consumer.valueFormat: jsonschema
+kafka-consumer.topic: test6
+kafka-consumer.keyFormat: binary
+kafka-consumer.valueFormat: string
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
