@@ -626,6 +626,34 @@ paths:
         - kafka_auth:
             - kafka:r
             - kafka:w
+  '/ksqldb/active':
+    post:
+      operationId: KsqlDBPullQueryActive
+      summary: KsqlDBPullQuery APIs by active consumer
+      requestBody:
+        description: "process a ksqlDB query"
+        required: true
+        content:
+          application/json:
+            schema:
+              "$ref": "#/components/schemas/KsqlDbPullQueryRequest"
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Consumer instance not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+      security:
+        - kafka_auth:
+            - kafka:r
+            - kafka:w
 components:
   securitySchemes:
     kafka_auth:
@@ -773,7 +801,25 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/TopicPartition"
-
+    KsqlDbPullQueryRequest:
+      type: object
+      properties:
+        query:
+          type: string
+        offset:
+          type: string
+          enum:
+            - earliest
+            - latest
+        queryType:
+          type: string
+          enum:
+            - pull
+            - push
+        deserializationError:
+          type: boolean
+        tableScanEnable:
+          type: boolean
     TopicPartition:
       type: object
       properties:

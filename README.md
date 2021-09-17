@@ -65,6 +65,168 @@ docker-compose up -d
 
 ---
 
+The above command starts Confluent Platform with a separate container for each Confluent Platform component. Your output should resemble the following:
+
+```text
+Creating network "cp-all-in-one_default" with the default driver
+Creating zookeeper ... done
+Creating broker    ... done
+Creating schema-registry ... done
+Creating rest-proxy      ... done
+Creating connect         ... done
+Creating ksql-datagen    ... done
+Creating ksqldb-server   ... done
+Creating control-center  ... done
+Creating ksqldb-cli      ... done
+```
+
+To verify that the services are up and running, run the following command:
+
+```text
+docker-compose ps
+```
+Your output should resemble the following:
+
+```text
+     Name                    Command               State                Ports
+------------------------------------------------------------------------------------------
+broker            /etc/confluent/docker/run        Up      0.0.0.0:29092->29092/tcp,
+                                                           0.0.0.0:9092->9092/tcp
+connect           /etc/confluent/docker/run        Up      0.0.0.0:8083->8083/tcp,
+                                                           9092/tcp
+control-center    /etc/confluent/docker/run        Up      0.0.0.0:9021->9021/tcp
+ksqldb-cli        /bin/sh                          Up
+ksql-datagen      bash -c echo Waiting for K ...   Up
+ksqldb-server     /etc/confluent/docker/run        Up      0.0.0.0:8088->8088/tcp
+rest-proxy        /etc/confluent/docker/run        Up      0.0.0.0:8082->8082/tcp
+schema-registry   /etc/confluent/docker/run        Up      0.0.0.0:8081->8081/tcp
+zookeeper         /etc/confluent/docker/run        Up      0.0.0.0:2181->2181/tcp,
+                                                           2888/tcp, 3888/tcp
+```
+
+Now we can Navigate to the Control Center web interface to verify:
+
+http://localhost:9021.
+
+---
+
+### Verify kafka sidecar  with local kafka:
+
+1. Navigate to the Control Center web interface (http://localhost:9021),in the navigation bar, click Topics to open the topics list, and then click Add a topic.
+
+![create-topic](doc/create-topic.png)
+
+Create a topic "test1" and client the topic add register the topic schema:
+
+key schema:
+
+```json
+{
+  "$id": "http://example.com/myURI.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Sample schema to help you get started.",
+  "title": "key_test1",
+  "type": "string"
+}
+```
+value schema:
+
+```json
+{
+  "$id": "http://example.com/myURI.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Sample schema to help you get started.",
+  "properties": {
+    "count": {
+      "description": "The integer type is used for integral numbers.",
+      "type": "integer"
+    }
+  },
+  "title": "value_test1",
+  "type": "object"
+}
+```
+
+2. Start kafka sidecar and backend api by docker-compose
+
+```text
+docker-compose -f docker-compose-demo up
+```
+
+//TODO for detail
+
+3. Produce messages to the test1 topic
+
+To produce some messages to the test1 topic, we can issue a curl command.
+
+```json
+curl --location --request POST 'http://localhost:8084/producers/test1' \
+--header 'X-Traceability-Id: 111111' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "records": [
+        {
+            "key": "alice",
+            "value": {
+                "count": 2
+            }
+        },
+        {
+            "key": "john",
+            "value": {
+                "count": 1
+            }
+        },
+        {
+            "key": "alex",
+            "value": {
+                "count": 2
+            }
+        }
+    ]
+}'
+```
+
+4. Verify the message in kafka test1 topic
+
+![create-topic](doc/test1-topic.png)
+
+5. Check the log, and we can see the result from backend API call:
+
+```text
+16:25:08.075 [XNIO-1 task-1]  mXFjPCfGSMiYfq_F3YrXSw INFO  c.s.e.e.m.k.h.ProducersTopicPostHandler:154 handleRequest - ProducerTopicPostHandler handleRequest start with topic test1
+16:25:09.851 [pool-3-thread-1]   INFO  c.s.e.e.m.k.ReactiveConsumerStartupHook$1:172 onCompletion - Send a batch to the backend API
+16:25:09.868 [pool-3-thread-1]   INFO  c.s.e.e.m.k.ReactiveConsumerStartupHook$1:186 onCompletion - Got successful response from the backend API
+```
+
+
+### Verify Reactive Consumer Dead Letter Queue (DLQ) feature:
+
+Reactive Consumer can set DLQ for those messgage process failed. The default DLQ name is the topic name + ".dlq". For our local test case, we can add a DQL: test1.dlq on kafka control center.
+
+And the enable DLQ on local_config/values.yml:
+
+```text
+kafka-consumer.deadLetterEnabled: true
+```
+
+In the backend-api, the first event for each message will mark as process failed:
+
+```text
+ RecordProcessedResult rpr = new RecordProcessedResult(record, false, sw.toString());
+```
+
+The Reactive Consumer will send those message to DLQ if deadLetterEnabled.
+
+
+### Verify KsqlDB query:
+
+[ksqlDB query](doc/ksql.md)
+
+
+
 ### To learn how to use this proxy, pleases refer to 
 
 * [Getting Started](https://doc.networknt.com/getting-started/light-proxy/) to learn core concepts
