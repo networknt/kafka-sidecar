@@ -1,15 +1,10 @@
 # producer format configuration
 kafka-producer.keyFormat: string
 kafka-producer.valueFormat: jsonschema
-kafka-producer.schema.registry.ssl.truststore.location: C:\\workspace\\eadp-eventhub-kafkasidecar\\src\\main\\resources\\config\\client.truststore
-kafka-producer.security.protocol: Plaintext
-
 
 # consumer format configuration
-kafka-consumer.topic: test6
-kafka-consumer.keyFormat: binary
-kafka-consumer.valueFormat: string
-kafka-consumer.schema.registry.ssl.truststore.location: C:\\networknt\\kafka-sidecar\\src\\main\\resources\\config\\client.truststore
+kafka-consumer.keyFormat: string
+kafka-consumer.valueFormat: jsonschema
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
