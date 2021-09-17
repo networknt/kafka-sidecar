@@ -69,7 +69,7 @@ basicAuthCredentialsUser: ${kafka-ksqldb.basicAuthCredentialsUser:userId}
 basicAuthCredentialsPassword: ${kafka-ksqldb.basicAuthCredentialsPassword:changeme}
 ```
 
-There is new endpoint added for executing ksqlDB query:
+There is a new endpoint added for executing ksqlDB query:
 
 
 ```text
@@ -101,10 +101,22 @@ Please refer [here](https://docs.ksqldb.io/en/latest/concepts/queries/) for deta
 
 "/ksqldb/active" endpoint support both query types, but we suggest to use pull query for this endpoint only. It much stable and have better performance.
 
+- Pull queries are expressed using a strict subset of ANSI SQL.
+- You can issue a pull query against any table that was created by a CREATE TABLE AS SELECT statement.
+- Currently, we do not support pull queries against tables created by using a CREATE TABLE statement.
+- Pull queries do not support JOIN, PARTITION BY, GROUP BY and WINDOW clauses (but can query materialized tables that contain those clauses).
 
-There is new request object been added into light-kafka:
+
+If you query to against KStream or KTable which  created by using a CREATE TABLE statement, set the query type as "push". 
+
+
+There is new request object has been added into light-kafka:
 
 https://github.com/networknt/light-kafka/blob/master/kafka-entity/src/main/java/com/networknt/kafka/entity/KsqlDbPullQueryRequest.java
+
+
+### Local sample test
+
 
 Sample request payload:
 
@@ -114,7 +126,7 @@ Sample request payload:
     "deserializationError": false,
     "queryType": "pull",
      "tableScanEnable": true,
-    "query": "select * from QUERYUSER1;"
+    "query": "select * from QUERYUSER;"
 }
 
 ```
@@ -137,8 +149,96 @@ Sample request payload:
 
 #### Sample request:
 
+- Create a topic name as test:
+
+![create-topic](test1-topic.png)
+
+And set the value JSON schema:
+
+```json
+{
+  "$id": "http://example.com/myURI.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Sample schema to help you get started.",
+  "properties": {
+    "country": {
+      "enum": [
+        "CA",
+        "US"
+      ],
+      "type": "string"
+    },
+    "firstName": {
+      "description": "First Name",
+      "type": "string"
+    },
+    "lastName": {
+      "description": "Last Name",
+      "type": "string"
+    },
+    "userId": {
+      "description": "User Id",
+      "type": "string"
+    }
+  },
+  "title": "value_test",
+  "type": "object"
+}
+```
+
+And then use the kafka sidecar "/producers/test" endpoint (POST) to populate some message to the topic.
+
+Sample request body:
+
+```json
+{
+    "records": [
+        {
+            "key": "1",
+            "value": {
+                "userId": "1111",
+                 "firstName": "test1"
+            }
+        },
+        {
+            "key": "2",
+            "value": {
+                "userId": "2222",
+                 "firstName": "test2"                
+            }
+        },
+        {
+            "key": "3",
+            "value": {
+                "userId": "3333",
+                 "firstName": "test3"                       
+            }
+        }
+    ]
+}
+```
+
+- Create KTable based on the topic created above:
+
+```json
+CREATE TABLE USERS 
+   (ID STRING PRIMARY KEY, USERID STRING, FIRSTNAME STRING, LASTNAME STRING, COUNTRY STRING) 
+    WITH (KAFKA_TOPIC='test', KEY_FORMAT='KAFKA', VALUE_FORMAT='JSON_SR');
+```
+
+- Create query able KTable based on the KTable above:
+
+```json
+
+ CREATE TABLE QUERYUSER AS SELECT * FROM USERS;
+
+```
+
+- Start kafka sidecar and verify by curl command:
+
 ```text
-curl --location --request POST 'http://localhost:8084/ksqldb/active' \
+curl --location --request POST 'http://localhost:8442/ksqldb/active' \
 --header 'Content-Type: application/json' \
 --data-raw ' 
 {
@@ -146,7 +246,7 @@ curl --location --request POST 'http://localhost:8084/ksqldb/active' \
     "deserializationError": false,
     "queryType": "pull",
      "tableScanEnable": true,
-    "query": "select * from QUERYUSER1 where id = '\''1'\'';"
+    "query": "select * from QUERYUSER where id = '\''1'\'';"
 }
 '
 ```
