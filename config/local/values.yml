@@ -7,6 +7,11 @@ kafka-consumer.topic: test6
 kafka-consumer.keyFormat: string
 kafka-consumer.valueFormat: string
 
+kafka-ksqldb.backendUrl: https://localhost:8444
+kafka-ksqldb.backendPath: /kafka/ksqldb
+kafka-ksqldb.ksqldbHost: localhost
+kafka-ksqldb.ksqldbPort: 8088
+
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
   - com.networknt.mesh.kafka.ProducerStartupHook
