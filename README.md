@@ -149,13 +149,42 @@ value schema:
 }
 ```
 
-2. Start kafka sidecar and backend api by docker-compose
+2. Start kafka sidecar and backend api:
+
+There are two options for starting kafka sidecar and backend api:
+
+- by standalone APIs
+  
+- by docker-compose
+----
+#### By docker-compose
+
+From command line, create a docker network first which will indicate kafka and sidecar running in same network. Then start kafka sidecar and backend api docker compose:
 
 ```text
-docker-compose -f docker-compose-demo up
+docker network create localnet
+
+docker-compose -f docker-compose-demo.yml up
 ```
 
-//TODO for detail
+It will start kafka sidecar and backend api by using config in the config/docker folder
+
+Notes: this is API docker container to kafka docker container, if you need change kafka lisener ports, please [refer](https://github.com/bitnami/bitnami-docker-kafka/blob/master/README.md#accessing-kafka-with-internal-and-external-clients) here
+
+
+#### By standalone APIs
+
+Or start kafka sidecar from IDE with VM options:
+
+-Dlight-4j-config-dir=config\local
+
+Start Backend service (optional, we can still test connect without backend service)
+
+Start below the backend API from IDE:
+
+https://github.com/networknt/light-example-4j/tree/release/kafka/sidecar-backend
+
+----
 
 3. Produce messages to the test1 topic
 

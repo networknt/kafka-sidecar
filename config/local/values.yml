@@ -1,10 +1,10 @@
 # producer format configuration
-kafka-producer.keyFormat: binary
+kafka-producer.keyFormat: string
 kafka-producer.valueFormat: string
 
 # consumer format configuration
 kafka-consumer.topic: test6
-kafka-consumer.keyFormat: binary
+kafka-consumer.keyFormat: string
 kafka-consumer.valueFormat: string
 
 # Service Startup and Shutdown Hooks
