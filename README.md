@@ -58,8 +58,13 @@ Click [here](https://doc.networknt.com/tutorial/kafka-sidecar/local-dev/#reactiv
 
 If the evnironment is windows OS, we can start confluent kafka docker-compose for testing:
 
+From command line, create a docker network first which will indicate kafka and sidecar running in same network. 
+
 ```
 cd kafka-sidecar
+
+docker network create localnet
+
 docker-compose up -d
 ```
 
@@ -159,10 +164,9 @@ There are two options for starting kafka sidecar and backend api:
 ----
 #### By docker-compose
 
-From command line, create a docker network first which will indicate kafka and sidecar running in same network. Then start kafka sidecar and backend api docker compose:
+Start kafka sidecar and backend api docker compose:
 
 ```text
-docker network create localnet
 
 docker-compose -f docker-compose-demo.yml up
 ```
