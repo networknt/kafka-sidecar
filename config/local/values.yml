@@ -1,11 +1,16 @@
 # producer format configuration
-kafka-producer.keyFormat: binary
+kafka-producer.keyFormat: string
 kafka-producer.valueFormat: string
 
 # consumer format configuration
 kafka-consumer.topic: test6
-kafka-consumer.keyFormat: binary
+kafka-consumer.keyFormat: string
 kafka-consumer.valueFormat: string
+
+kafka-ksqldb.backendUrl: https://localhost:8444
+kafka-ksqldb.backendPath: /kafka/ksqldb
+kafka-ksqldb.ksqldbHost: localhost
+kafka-ksqldb.ksqldbPort: 8088
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:

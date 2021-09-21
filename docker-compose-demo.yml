@@ -10,13 +10,22 @@ services:
     ports:
       - 8443:8443
     hostname: kafka-sidecar
-    network_mode: host
+    #network_mode: host
     container_name: kafka-sidecar
+    networks:
+      - localnet
 
   sidecar-backend:
     image: networknt/sidecar-backend-1.0.0:2.0.30
     ports:
       - 8444:8444
     hostname: sidecar-backend
-    network_mode: host
+    #network_mode: host
     container_name: sidecar-backend
+    networks:
+      - localnet
+
+networks:
+  localnet:
+    # driver: bridge
+    external: true
