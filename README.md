@@ -253,6 +253,50 @@ In the backend-api, the first event for each message will mark as process failed
 
 The Reactive Consumer will send those message to DLQ if deadLetterEnabled.
 
+### Using the sidecar endpoint to producer error message to DLQ:
+
+- endpoint: 
+
+  /deadLetters/active
+
+- method
+  
+   POST
+
+Sample request payload:
+
+```json
+[
+    {
+        "record": {
+            "topic": "test6",
+            "key": "YWxleA==",
+            "value": "xyz",
+            "partition": 0,
+            "offset": 0
+        },
+        "processed": false,
+        "stacktrace": "error happened",
+        "correlationId": "cccc-1111111",
+        "traceabilityId": "tttt-1111111",
+        "key": "YWxleA=="
+    },
+        {
+        "record": {
+            "topic": "test7",
+            "key": "YWxleA==",
+            "value": "xyz",
+            "partition": 0,
+            "offset": 0
+        },
+        "processed": false,
+        "stacktrace": "error happened",
+        "correlationId": "cccc-1111111",
+        "traceabilityId": "tttt-1111111",
+        "key": "YWxleA=="
+    }
+]
+```
 
 ### Verify KsqlDB query:
 
