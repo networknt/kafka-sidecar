@@ -16,6 +16,7 @@ import com.networknt.kafka.producer.ProduceResult;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.SidecarAuditHelper;
 import com.networknt.server.Server;
+import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.undertow.server.HttpServerExchange;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -37,7 +38,7 @@ public class DeadlettersQueueActivePostHandler implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(DeadlettersQueueActivePostHandler.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
-
+    private static String DLQ_ACTIVE_PROCEDURE_ERROR = "ERR30003";
 
     public DeadlettersQueueActivePostHandler() {
         //TODO
@@ -51,15 +52,23 @@ public class DeadlettersQueueActivePostHandler implements LightHttpHandler {
 
         if(ProducerStartupHook.producer != null) {
             exchange.dispatch();
-            CompletableFuture<List<ProduceResult>> responseFutures = doProduce(recordProcessedResultList);
-            List<ProduceResult> result = responseFutures.get();
-            exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
-            exchange.setStatusCode(200);
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.registerModule(new JavaTimeModule());
-            exchange.getResponseSender().send(objectMapper.writeValueAsString(result));
-            //TODO change to enable below after light-4j issue fix
-         //   exchange.getResponseSender().send(JsonMapper.toJson(result));
+            try {
+                CompletableFuture<List<ProduceResult>> responseFutures = doProduce(recordProcessedResultList);
+                List<ProduceResult> result = responseFutures.get();
+                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
+                exchange.setStatusCode(200);
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.registerModule(new JavaTimeModule());
+                exchange.getResponseSender().send(objectMapper.writeValueAsString(result));
+                //TODO change to enable below after light-4j issue fix
+                //   exchange.getResponseSender().send(JsonMapper.toJson(result));
+            } catch (Exception e) {
+                logger.error("error happen: " + e);
+                Status status = new Status(DLQ_ACTIVE_PROCEDURE_ERROR);
+                status.setDescription(e.getMessage());
+                setExchangeStatus(exchange, status);
+            }
+
         } else {
             setExchangeStatus(exchange, PRODUCER_NOT_ENABLED);
         }
