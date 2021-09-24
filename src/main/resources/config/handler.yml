@@ -81,6 +81,7 @@ handlers:
   - com.networknt.mesh.kafka.handler.DeadlettersQueueReactiveGetHandler
   - com.networknt.mesh.kafka.handler.DeadlettersQueueActiveGetHandler
   - com.networknt.mesh.kafka.handler.KsqldbActivePostHandler
+  - com.networknt.mesh.kafka.handler.DeadlettersQueueActivePostHandler
 
 chains:
   default:
@@ -182,6 +183,11 @@ paths:
     exec:
       - default
       - com.networknt.mesh.kafka.handler.KsqldbActivePostHandler
+  - path: '/deadLetters/active'
+    method: 'POST'
+    exec:
+      - default
+      - com.networknt.mesh.kafka.handler.DeadlettersQueueActivePostHandler
 
   # k8s liveness probe without security
   - path: '/health/liveness'

@@ -28,3 +28,8 @@ ERR30002:
   code: ERR30002
   message:  KSQL_IMPLEMENTATION_ERROR
   description: This is invalid KSQL query to run, please verify the query type(pull/push) and query body.
+ERR30003:
+  statusCode: 400
+  code: ERR30003
+  message:  DLQ_ACTIVE_PROCEDURE_ERROR
+  description: Error happened when procedure the message to DLQ.

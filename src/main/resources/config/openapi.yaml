@@ -626,6 +626,35 @@ paths:
         - kafka_auth:
             - kafka:r
             - kafka:w
+    post:
+      operationId: DLQProducer
+      summary: producer error event to DLQ by active consumer
+      requestBody:
+        description: "Record Processed Result object"
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecordProcessedResult'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: object
+        '404':
+          description: Consumer instance not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+      security:
+        - kafka_auth:
+            - kafka:r
+            - kafka:w
   '/ksqldb/active':
     post:
       operationId: KsqlDBPullQueryActive
@@ -886,7 +915,21 @@ components:
           type: string
         metadata:
           type: string
-
+    RecordProcessedResult:
+      type: object
+      properties:
+        consumerRecord:
+          $ref: '#/components/schemas/ConsumerRecord'
+        key:
+          type: string
+        correlationId:
+          type: string
+        traceabilityId:
+          type: string
+        stacktrace:
+          type: string
+        processed:
+          type: boolean
     ConsumerAssignmentRequest:
       type: object
       properties:
