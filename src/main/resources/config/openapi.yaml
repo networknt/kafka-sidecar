@@ -683,6 +683,38 @@ paths:
         - kafka_auth:
             - kafka:r
             - kafka:w
+  '/consumer/active/audit':
+    post:
+      operationId: ConsumerActiveAudit
+      summary: Send Audit messaage for active consumer
+      requestBody:
+        description: "Record Processed Result for Audit"
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecordProcessedResult'
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AuditRecord'
+        '400':
+          description: Consumer instance not found
+          content:
+            application/json:
+              schema:
+                "$ref": "#/components/schemas/Status"
+      security:
+        - kafka_auth:
+            - kafka:r
+            - kafka:w
 components:
   securitySchemes:
     kafka_auth:
@@ -962,6 +994,39 @@ components:
           type: array
           items:
             type: string
+    AuditRecord:
+      type: object
+      properties:
+        topic:
+          type: string
+        partition:
+          type: integer
+        offset:
+          type: integer
+          format: int64
+        id:
+          type: string
+        serviceId:
+          type: string
+        key:
+          type: string
+        correlationId:
+          type: string
+        traceabilityId:
+          type: string
+        stacktrace:
+          type: string
+        auditType:
+          type: string
+          enum:
+            - PRODUCER
+            - REACTIVE_CONSUMER
+            - ACTIVE_CONSUMER
+        AuditStatus:
+          type: string
+          enum:
+            - SUCCESS
+            - FAILURE
 
     Status:
       type: object

@@ -303,6 +303,50 @@ Sample request payload:
 [ksqlDB query](doc/ksql.md)
 
 
+### Active Consumer Workflow:
+
+Kafka sidecar provide the end-to-end workflow for actively consumer the records from kafka topic(s).  
+
+When user try  following workflow to consumer records:
+
+- enable ActiveConsumerStartupHook on service.yml (or values.yml)
+  
+   This will create kafka consumer manager for active consumer on kafka sidecar server startup
+
+
+-  create consumer group
+   
+    endpoint: /consumers/{group}
+ 
+    method: POST
+
+
+-  subscribe the topics for consumer group created above
+
+   endpoint: /consumers/{group}/instances/{instance}/subscriptions
+
+   method: POST
+
+
+- consumer records from kafka topics subscribed above (default will start from 0 offset, user move the offset by calling different endpoints)
+
+  endpoint: /consumers/{group}/instances/{instance}/records
+
+  method: GET
+
+
+- submit offset after consumer
+
+  endpoint: /consumers/{group}/instances/{instance}/offsets
+
+  method: POST
+
+
+- add the records process detail to audit 
+
+  endpoint: /consumer/active/audit
+
+  method: POST
 
 ### To learn how to use this proxy, pleases refer to 
 
