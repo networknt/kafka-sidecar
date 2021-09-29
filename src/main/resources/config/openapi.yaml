@@ -538,7 +538,7 @@ paths:
       security:
         - kafka_auth:
             - kafka:r
-  '/deadLetters/reactive':
+  '/consumers/deadLetter/reactive':
     get:
       operationId: DLTopicReplayReactive
       summary: replay the message in the DLQ APIs by reactive consumer
@@ -584,7 +584,7 @@ paths:
         - kafka_auth:
             - kafka:r
             - kafka:w
-  '/deadLetters/active':
+  '/consumers/deadLetter/active':
     get:
       operationId: DLTopicReplayAactive
       summary: replay the message in the DLQ APIs by active consumer
@@ -683,7 +683,7 @@ paths:
         - kafka_auth:
             - kafka:r
             - kafka:w
-  '/consumer/active/audit':
+  '/consumers/active/audit':
     post:
       operationId: ConsumerActiveAudit
       summary: Send Audit messaage for active consumer

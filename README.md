@@ -257,7 +257,7 @@ The Reactive Consumer will send those message to DLQ if deadLetterEnabled.
 
 - endpoint: 
 
-  /deadLetters/active
+  /consumers/deadLetter/active
 
 - method
   
@@ -344,7 +344,7 @@ When user try  following workflow to consumer records:
 
 - add the records process detail to audit 
 
-  endpoint: /consumer/active/audit
+  endpoint: /consumers/active/audit
 
   method: POST
 
