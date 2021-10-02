@@ -169,12 +169,12 @@ paths:
     exec:
       - default
       - com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler
-  - path: '/deadLetters/reactive'
+  - path: '/consumers/deadLetter/reactive'
     method: 'GET'
     exec:
       - default
       - com.networknt.mesh.kafka.handler.DeadlettersQueueReactiveGetHandler
-  - path: '/deadLetters/active'
+  - path: '/consumers/deadLetter/active'
     method: 'GET'
     exec:
       - default
@@ -184,12 +184,12 @@ paths:
     exec:
       - default
       - com.networknt.mesh.kafka.handler.KsqldbActivePostHandler
-  - path: '/deadLetters/active'
+  - path: '/consumers/deadLetter/active'
     method: 'POST'
     exec:
       - default
       - com.networknt.mesh.kafka.handler.DeadlettersQueueActivePostHandler
-  - path: '/consumer/active/audit'
+  - path: '/consumers/active/audit'
     method: 'POST'
     exec:
       - default

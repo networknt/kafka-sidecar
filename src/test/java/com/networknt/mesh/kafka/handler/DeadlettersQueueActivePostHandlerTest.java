@@ -59,7 +59,7 @@ public class DeadlettersQueueActivePostHandlerTest {
             throw new ClientException(e);
         }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-        String requestUri = "/deadLetters/active";
+        String requestUri = "/consumers/deadLetter/active";
         String httpMethod = "post";
         List<RecordProcessedResult> recordProcessedResultList = new ArrayList<>();
         RecordProcessedResult recordProcessedResult1 = new RecordProcessedResult();
