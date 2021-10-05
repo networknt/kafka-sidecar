@@ -18,6 +18,7 @@ import io.undertow.client.ClientResponse;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
@@ -212,9 +213,9 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
                                      result.getRecord().getTopic() + config.getDeadLetterTopicExt(),
                                      null,
                                      System.currentTimeMillis(),
-                                     null,
-                                     JsonMapper.toJson(result).getBytes(StandardCharsets.UTF_8),
-                                     null),
+                                     result.getKey().getBytes(StandardCharsets.UTF_8),
+                                     JsonMapper.toJson(result.getRecord().getValue()).getBytes(StandardCharsets.UTF_8),
+                                     populateHeaders(result)),
                              (metadata, exception) -> {
                                  if (exception != null) {
                                      // handle the exception by logging an error;
@@ -228,6 +229,29 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
              }
          }
 
+    }
+
+    public org.apache.kafka.common.header.Headers populateHeaders(RecordProcessedResult recordProcessedResult) {
+        org.apache.kafka.common.header.Headers headers = new RecordHeaders();
+        if (recordProcessedResult.getCorrelationId()!=null) {
+            headers.add(Constants.CORRELATION_ID_STRING, recordProcessedResult.getCorrelationId().getBytes(StandardCharsets.UTF_8));
+        }
+        if (recordProcessedResult.getTraceabilityId()!=null) {
+            headers.add(Constants.TRACEABILITY_ID_STRING, recordProcessedResult.getTraceabilityId().getBytes(StandardCharsets.UTF_8));
+        }
+        if (recordProcessedResult.getStacktrace()!=null) {
+            headers.add(Constants.STACK_TRACE, recordProcessedResult.getStacktrace().getBytes(StandardCharsets.UTF_8));
+        }
+        Map<String, String> recordHeaders = recordProcessedResult.getRecord().getHeaders();
+        if (recordHeaders!=null && recordHeaders.size()>0) {
+            recordHeaders.keySet().stream().forEach(h->{
+                if (recordHeaders.get(h)!=null) {
+                    headers.add(h, recordHeaders.get(h).getBytes(StandardCharsets.UTF_8));
+                }
+            });
+        }
+
+        return headers;
     }
 
     private void writeAuditLog(RecordProcessedResult result) {

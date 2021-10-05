@@ -18,6 +18,8 @@ import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import io.undertow.server.HttpServerExchange;
 import org.apache.kafka.clients.producer.ProducerRecord;
+import org.apache.kafka.common.header.Headers;
+import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,9 +86,9 @@ public class DeadlettersQueueActivePostHandler implements LightHttpHandler {
                         recordProcessedResult.getRecord().getTopic() + config.getDeadLetterTopicExt(),
                         null,
                         System.currentTimeMillis(),
-                        null,
-                        JsonMapper.toJson(recordProcessedResult).getBytes(StandardCharsets.UTF_8),
-                        null),
+                        recordProcessedResult.getKey().getBytes(StandardCharsets.UTF_8),
+                        JsonMapper.toJson(recordProcessedResult.getRecord().getValue()).getBytes(StandardCharsets.UTF_8),
+                        populateHeaders(recordProcessedResult)),
                 (metadata, exception) -> {
                     if (exception != null) {
                         result.completeExceptionally(exception);
@@ -98,6 +100,29 @@ public class DeadlettersQueueActivePostHandler implements LightHttpHandler {
                     }
                 });
         return result;
+    }
+
+    public Headers populateHeaders(RecordProcessedResult recordProcessedResult) {
+        Headers headers = new RecordHeaders();
+        if (recordProcessedResult.getCorrelationId()!=null) {
+            headers.add(Constants.CORRELATION_ID_STRING, recordProcessedResult.getCorrelationId().getBytes(StandardCharsets.UTF_8));
+        }
+        if (recordProcessedResult.getTraceabilityId()!=null) {
+            headers.add(Constants.TRACEABILITY_ID_STRING, recordProcessedResult.getTraceabilityId().getBytes(StandardCharsets.UTF_8));
+        }
+        if (recordProcessedResult.getStacktrace()!=null) {
+            headers.add(Constants.STACK_TRACE, recordProcessedResult.getStacktrace().getBytes(StandardCharsets.UTF_8));
+        }
+        Map<String, String> recordHeaders = recordProcessedResult.getRecord().getHeaders();
+        if (recordHeaders!=null && recordHeaders.size()>0) {
+            recordHeaders.keySet().stream().forEach(h->{
+                if (recordHeaders.get(h)!=null) {
+                    headers.add(h, recordHeaders.get(h).getBytes(StandardCharsets.UTF_8));
+                }
+            });
+        }
+
+        return headers;
     }
 
     private void writeAuditLog(RecordProcessedResult result) {
