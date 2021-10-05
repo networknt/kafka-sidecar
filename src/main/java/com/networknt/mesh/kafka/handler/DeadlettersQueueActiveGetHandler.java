@@ -98,16 +98,11 @@ public class DeadlettersQueueActiveGetHandler implements LightHttpHandler {
                             setExchangeStatus(exchange, e.getStatus());
                         } else {
                             if(logger.isDebugEnabled()) logger.debug("polled records size = " + records.size());
-                            List<ConsumerRecord<ClientKeyT, ClientValueT>> sidecarConsumerRecords = new ArrayList<>();
-                            for (ConsumerRecord<ClientKeyT, ClientValueT> record:records) {
-                                RecordProcessedResult recordProcessedResult = JsonMapper.fromJson(((com.fasterxml.jackson.databind.node.TextNode)record.getValue()).textValue(), RecordProcessedResult.class);
-                                sidecarConsumerRecords.add(recordProcessedResult.getRecord());
-                            }
                             if(logger.isDebugEnabled()) logger.debug("total dlq records processed:" + records.size());
                             ActiveConsumerStartupHook.kafkaConsumerManager.commitCurrentOffsets(group, instance);
                             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
                             exchange.setStatusCode(200);
-                            exchange.getResponseSender().send(JsonMapper.toJson(sidecarConsumerRecords.stream().map(toJsonWrapper).collect(Collectors.toList())));
+                            exchange.getResponseSender().send(JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList())));
 
                         }
                     }

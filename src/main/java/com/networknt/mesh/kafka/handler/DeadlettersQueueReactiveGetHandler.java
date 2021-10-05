@@ -160,12 +160,8 @@ public class DeadlettersQueueReactiveGetHandler implements LightHttpHandler {
                                     request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
                                     request.getRequestHeaders().put(Headers.HOST, "localhost");
                                     if(logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
-                                    List<ConsumerRecord<ClientKeyT, ClientValueT>> sidecarConsumerRecords = new ArrayList<>();
-                                    for (ConsumerRecord<ClientKeyT, ClientValueT> record:records) {
-                                        RecordProcessedResult recordProcessedResult = JsonMapper.fromJson(((com.fasterxml.jackson.databind.node.TextNode)record.getValue()).textValue(), RecordProcessedResult.class);
-                                        sidecarConsumerRecords.add(recordProcessedResult.getRecord());
-                                    }
-                                    connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(sidecarConsumerRecords.stream().map(toJsonWrapper).collect(Collectors.toList()))));
+
+                                    connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
                                     latch.await();
                                     int statusCode = reference.get().getResponseCode();
                                     String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
