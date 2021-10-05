@@ -10,7 +10,6 @@ import com.networknt.kafka.entity.*;
 import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.Constants;
-import com.networknt.utility.ModuleRegistry;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientRequest;
@@ -72,11 +71,6 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         }
         kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
         runConsumer();
-        List<String> masks = new ArrayList<>();
-        masks.add("basic.auth.user.info");
-        masks.add("sasl.jaas.config");
-        ModuleRegistry.registerModule(ReactiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaConsumerConfig.CONFIG_NAME), masks);
-        logger.info("ReactiveConsumerStartupHook ends");
     }
 
     private void runConsumer() {
