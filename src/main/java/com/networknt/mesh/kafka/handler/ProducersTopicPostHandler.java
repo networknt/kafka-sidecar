@@ -19,7 +19,6 @@ import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.kafka.entity.EmbeddedFormat;
-import com.networknt.utility.ModuleRegistry;
 import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
@@ -109,12 +108,6 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                     callerId = (String) serverConfig.get("serviceId");
                 }
             }
-            // register the module with the configuration properties.
-            List<String> masks = new ArrayList<>();
-            masks.add("basic.auth.user.info");
-            masks.add("sasl.jaas.config");
-            masks.add("schemaRegistryTruststorePass");
-            ModuleRegistry.registerModule(ProducersTopicPostHandler.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaProducerConfig.CONFIG_NAME), masks);
         }
     }
 
