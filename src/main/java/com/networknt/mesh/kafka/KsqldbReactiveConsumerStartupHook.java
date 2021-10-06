@@ -9,14 +9,14 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 
-public class KsqldbConsumerStartupHook implements StartupHookProvider {
-    private static Logger logger = LoggerFactory.getLogger(KsqldbConsumerStartupHook.class);
+public class KsqldbReactiveConsumerStartupHook implements StartupHookProvider {
+    private static Logger logger = LoggerFactory.getLogger(KsqldbReactiveConsumerStartupHook.class);
     private static KafkaKsqldbConfig config = (KafkaKsqldbConfig) Config.getInstance().getJsonObjectConfig(KafkaKsqldbConfig.CONFIG_NAME, KafkaKsqldbConfig.class);
     public static Client client = null;
 
     @Override
     public void onStartup() {
-        logger.info("KsqldbConsumerStartupHook begins");
+        logger.info("KsqldbReactiveConsumerStartupHook begins");
         ClientOptions options = ClientOptions.create()
                 .setHost(config.getKsqldbHost())
                 .setPort(config.getKsqldbPort());
@@ -35,6 +35,6 @@ public class KsqldbConsumerStartupHook implements StartupHookProvider {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        logger.info("KsqldbConsumerStartupHook ends");
+        logger.info("KsqldbReactiveConsumerStartupHook ends");
     }
 }
