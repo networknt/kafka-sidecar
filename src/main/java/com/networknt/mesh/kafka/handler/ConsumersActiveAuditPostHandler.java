@@ -28,13 +28,13 @@ import java.util.stream.Collectors;
 For more information on how to write business handlers, please check the link below.
 https://doc.networknt.com/development/business-handler/rest/
 */
-public class ConsumerActiveAuditPostHandler implements LightHttpHandler {
-    private static final Logger logger = LoggerFactory.getLogger(ConsumerActiveAuditPostHandler.class);
+public class ConsumersActiveAuditPostHandler implements LightHttpHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ConsumersActiveAuditPostHandler.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
     private static String CONSUMER_ACTIVE_AUDIT_ERROR = "ERR30004";
 
-    public ConsumerActiveAuditPostHandler() {
+    public ConsumersActiveAuditPostHandler() {
         //TODO
     }
 
