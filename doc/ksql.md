@@ -35,14 +35,14 @@ Start with :
 service.com.networknt.server.StartupHookProvider:
   - com.networknt.mesh.kafka.ProducerStartupHook
   # - com.networknt.mesh.kafka.ActiveConsumerStartupHook
-  # - com.networknt.mesh.kafka.KsqldbConsumerStartupHook
+  # - com.networknt.mesh.kafka.KsqldbReactiveConsumerStartupHook
   - com.networknt.mesh.kafka.KsqldbActiveConsumerStartupHook
   - com.networknt.mesh.kafka.ReactiveConsumerStartupHook
   # - com.networknt.mesh.kafka.AdminClientStartupHook
 service.com.networknt.server.ShutdownHookProvider:
   - com.networknt.mesh.kafka.ProducerShutdownHook
   # - com.networknt.mesh.kafka.ActiveConsumerShutdownHook
-  # - com.networknt.mesh.kafka.KsqldbConsumerShutdownHook
+  # - com.networknt.mesh.kafka.KsqldbReactiveConsumerShutdownHook
   - com.networknt.mesh.kafka.ReactiveConsumerShutdownHook
   # - com.networknt.mesh.kafka.AdminClientShutdownHook
   - com.networknt.mesh.kafka.KsqldbActiveConsumerShutdownHook

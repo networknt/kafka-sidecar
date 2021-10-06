@@ -9,7 +9,7 @@ public class KsqldbActiveConsumerShutdownHook implements ShutdownHookProvider {
 
     @Override
     public void onShutdown() {
-        logger.debug("KsqldbConsumerShutdownHook begins");
+        logger.info("KsqldbActiveConsumerShutdownHook begins");
         if(KsqldbActiveConsumerStartupHook.client != null) {
             KsqldbActiveConsumerStartupHook.client.close();
         }

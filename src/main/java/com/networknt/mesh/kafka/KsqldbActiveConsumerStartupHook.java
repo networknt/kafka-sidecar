@@ -20,7 +20,7 @@ public class KsqldbActiveConsumerStartupHook implements StartupHookProvider {
 
     @Override
     public void onStartup() {
-        logger.info("KsqldbConsumerStartupHook begins");
+        logger.info("KsqldbActiveConsumerStartupHook begins");
         ClientOptions options;
         if (config.isUseTls()) {
             options = ClientOptions.create()
