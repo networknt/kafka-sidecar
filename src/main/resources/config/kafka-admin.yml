@@ -14,6 +14,8 @@ properties:
   sasl.mechanism: ${kafka-admin.sasl.mechanism:PLAIN}
   sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-admin.username:username}\" password=\"${KAFKA_ADMIN_PASSWORD:password}\";"
   ssl.endpoint.identification.algorithm: ${kafka-admin.ssl.endpoint.identification.algorithm:algo-name}
+  ssl.truststore.location: ${kafka-admin.ssl.truststore.location:/truststore/kafka.server.truststore.jks}
+  ssl.truststore.password: ${kafka-admin.ssl.truststore.password:changeme}
   client.rack: ${kafka-admin.client.rack:rack-name}
   # basic authentication user:pass for the schema registry
   basic.auth.user.info: ${kafka-admin.username:username}:${KAFKA_ADMIN_PASSWORD:password}

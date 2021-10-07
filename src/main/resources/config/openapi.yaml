@@ -493,33 +493,6 @@ paths:
           required: false
           schema:
             type: integer
-        - name: keyFormat
-          in: query
-          description: The key format of consumer
-          required: false
-          schema:
-            type: string
-            enum:
-              - binary
-              - json
-              - avro
-              - jsonschema
-              - protobuf
-              - string
-        - name: valueFormat
-          in: query
-          description: The value format of consumer
-          required: false
-          schema:
-            type: string
-            enum:
-              - binary
-              - json
-              - avro
-              - jsonschema
-              - protobuf
-              - string
-
       responses:
         '200':
           description: Successful response
@@ -586,7 +559,7 @@ paths:
             - kafka:w
   '/consumers/deadLetter/active':
     get:
-      operationId: DLTopicReplayAactive
+      operationId: DLTopicReplayActive
       summary: replay the message in the DLQ APIs by active consumer
       parameters:
         - name: group
@@ -702,10 +675,8 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/AuditRecord'
-        '400':
+                type: object
+        '404':
           description: Consumer instance not found
           content:
             application/json:
@@ -733,12 +704,12 @@ components:
         keyFormat:
           type: integer
           enum: [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
           ]
         keySchema:
           type: string
@@ -751,12 +722,12 @@ components:
         valueFormat:
           type: integer
           enum: [
-            0,
-            1,
-            2,
-            3,
-            4,
-            5
+              0,
+              1,
+              2,
+              3,
+              4,
+              5
           ]
         valueSchema:
           type: string
@@ -833,21 +804,7 @@ components:
           type: number
         metadata:
           type: string
-    DeadLetterQueueReplayResponse:
-      type: object
-      properties:
-        group:
-          type: string
-        instance:
-          type: string
-        topics:
-          type: array
-          items:
-            type: string
-        records:
-          type: number
-        description:
-          type: string
+
     ConsumerCommittedResponse:
       type: object
       properties:
@@ -862,6 +819,15 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/TopicPartition"
+
+    TopicPartition:
+      type: object
+      properties:
+        topic:
+          type: string
+        partition:
+          type: integer
+          minimum: 0
     KsqlDbPullQueryRequest:
       type: object
       required:
@@ -883,15 +849,6 @@ components:
           type: boolean
         tableScanEnable:
           type: boolean
-    TopicPartition:
-      type: object
-      properties:
-        topic:
-          type: string
-        partition:
-          type: integer
-          minimum: 0
-
     ConsumerRecord:
       type: object
       properties:
@@ -905,6 +862,21 @@ components:
           type: integer
         offset:
           type: number
+    RecordProcessedResult:
+      type: object
+      properties:
+        consumerRecord:
+          $ref: '#/components/schemas/ConsumerRecord'
+        key:
+          type: string
+        correlationId:
+          type: string
+        traceabilityId:
+          type: string
+        stacktrace:
+          type: string
+        processed:
+          type: boolean
     ConsumerSeekToRequest:
       type: object
       properties:
@@ -923,7 +895,21 @@ components:
           type: array
           items:
             "$ref": "#/components/schemas/PartitionTimestamp"
-
+    DeadLetterQueueReplayResponse:
+      type: object
+      properties:
+        group:
+          type: string
+        instance:
+          type: string
+        topics:
+          type: array
+          items:
+            type: string
+        records:
+          type: number
+        description:
+          type: string
     PartitionOffset:
       type: object
       properties:
@@ -947,21 +933,7 @@ components:
           type: string
         metadata:
           type: string
-    RecordProcessedResult:
-      type: object
-      properties:
-        consumerRecord:
-          $ref: '#/components/schemas/ConsumerRecord'
-        key:
-          type: string
-        correlationId:
-          type: string
-        traceabilityId:
-          type: string
-        stacktrace:
-          type: string
-        processed:
-          type: boolean
+
     ConsumerAssignmentRequest:
       type: object
       properties:
@@ -994,39 +966,6 @@ components:
           type: array
           items:
             type: string
-    AuditRecord:
-      type: object
-      properties:
-        topic:
-          type: string
-        partition:
-          type: integer
-        offset:
-          type: integer
-          format: int64
-        id:
-          type: string
-        serviceId:
-          type: string
-        key:
-          type: string
-        correlationId:
-          type: string
-        traceabilityId:
-          type: string
-        stacktrace:
-          type: string
-        auditType:
-          type: string
-          enum:
-            - PRODUCER
-            - REACTIVE_CONSUMER
-            - ACTIVE_CONSUMER
-        AuditStatus:
-          type: string
-          enum:
-            - SUCCESS
-            - FAILURE
 
     Status:
       type: object

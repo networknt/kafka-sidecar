@@ -22,19 +22,19 @@ public class KsqldbReactiveConsumerStartupHook implements StartupHookProvider {
                 .setPort(config.getKsqldbPort());
         client = Client.create(options);
         Map<String, Object> properties = config.getProperties();
-        try {
-            client.streamQuery(config.getQuery(), properties)
-                    .thenAccept(streamedQueryResult -> {
-                        System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
-                        RowSubscriber subscriber = new RowSubscriber();
-                        streamedQueryResult.subscribe(subscriber);
-                    }).exceptionally(e -> {
-                System.out.println("Request failed: " + e);
-                return null;
-            });
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            client.streamQuery(config.getQuery(), properties)
+//                    .thenAccept(streamedQueryResult -> {
+//                        System.out.println("Query has started. Query ID: " + streamedQueryResult.queryID());
+//                        RowSubscriber subscriber = new RowSubscriber();
+//                        streamedQueryResult.subscribe(subscriber);
+//                    }).exceptionally(e -> {
+//                System.out.println("Request failed: " + e);
+//                return null;
+//            });
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         logger.info("KsqldbReactiveConsumerStartupHook ends");
     }
 }

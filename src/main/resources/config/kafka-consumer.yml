@@ -18,10 +18,12 @@ properties:
   security.protocol: ${kafka-consumer.security.protocol:SASL_SSL}
   sasl.mechanism: ${kafka-consumer.sasl.mechanism:PLAIN}
   sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-consumer.username:username}\" password=\"${KAFKA_CONSUMER_PASSWORD:password}\";"
+  ssl.truststore.location: ${kafka-consumer.ssl.truststore.location:/truststore/kafka.server.truststore.jks}
+  ssl.truststore.password: ${kafka-consumer.ssl.truststore.password:changeme}
   ssl.endpoint.identification.algorithm: ${kafka-consumer.ssl.endpoint.identification.algorithm:algo-name}
   # Apache Kafka 2.3 clients or later will then read from followers that have matching broker.rack as the specified client.rack ID.
   client.rack: ${kafka-consumer.client.rack:rack-name}
-  # basic authentication user:pass for the schema registry
+  # basic authentication user:pass for the schema-registry
   basic.auth.user.info: ${kafka-consumer.username:username}:${KAFKA_CONSUMER_PASSWORD:password}
   basic.auth.credentials.source: ${kafka-consumer.basic.auth.credentials.source:USER_INFO}
   # max fetch size from Kafka cluster. Default 50mb is too big for cache consumption on the sidecar
@@ -38,10 +40,9 @@ properties:
 deadLetterEnabled: ${kafka-consumer.deadLetterEnabled:true}
 # The extension of the dead letter queue(topic) that is added to the original topic to form the dead letter topic
 deadLetterTopicExt: ${kafka-consumer.deadLetterTopicExt:.dlq}
-
 # Indicator if the audit is enabled.
 auditEnabled: ${kafka-consumer.auditEnabled:true}
-# Audit log destination topic or logfile. Default to topic
+# Audit log destination topic or logfile. Default to logfile
 auditTarget: ${kafka-consumer.auditTarget:logfile}
 # The consumer audit topic name if the auditTarget is topic
 auditTopic: ${kafka-consumer.auditTopic:sidecar-audit}
@@ -82,3 +83,4 @@ fetchMinBytes: ${kafka-consumer.fetchMinBytes:-1}
 instanceTimeoutMs: ${kafka-consumer.instanceTimeoutMs:300000}
 # Amount of time to backoff when an iterator runs out of date.
 iteratorBackoffMs: ${kafka-consumer.iteratorBackoffMs:50}
+

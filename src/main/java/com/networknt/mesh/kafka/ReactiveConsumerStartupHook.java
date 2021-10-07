@@ -72,6 +72,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         }
         kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
         runConsumer();
+        logger.info("ReactiveConsumerStartupHook ends");
     }
 
     private void runConsumer() {
