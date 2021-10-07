@@ -10,11 +10,11 @@ public class ProducerShutdownHook implements ShutdownHookProvider {
 
     @Override
     public void onShutdown() {
-        logger.info("ProducerStartupHook begins");
+        logger.info("ProducerShutdownHook begins");
         LightProducer producer = SingletonServiceFactory.getBean(LightProducer.class);
         if(producer != null) {
             producer.close();
         }
-        logger.info("ProducerStartupHook ends");
+        logger.info("ProducerShutdownHook ends");
     }
 }

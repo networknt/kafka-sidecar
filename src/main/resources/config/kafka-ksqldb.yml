@@ -11,7 +11,7 @@ trustStorePassword: ${kafka-ksqldb.trustStorePassword:changeme}
 # ksqlDB basic Authentication Credentials username
 basicAuthCredentialsUser: ${kafka-ksqldb.username:userId}
 # ksqlDB basic Authentication Credentials Password
-basicAuthCredentialsPassword: ${kafka-ksqldb.password:changeme}
+basicAuthCredentialsPassword: ${KAFKA_KSQLDB_PASSWORD:changeme}
 # create streams for ksqldb process.
 #initialStreams: ${kafka-ksqldb.initialStreams:}
 #initialStreams:

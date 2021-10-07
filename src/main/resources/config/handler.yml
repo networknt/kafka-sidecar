@@ -195,22 +195,22 @@ paths:
       - default
       - com.networknt.mesh.kafka.handler.ConsumersActiveAuditPostHandler
 
-  # k8s liveness probe without security
-  - path: '/health/liveness'
-    method: 'get'
-    exec:
-      - health
-
-  # k8s readiness probe without security
-  - path: '/health/readiness'
-    method: 'get'
-    exec:
-      - health
-
+  # control plane health check with security
   - path: '/health/${server.serviceId:com.networknt.kafka-sidecar-1.0.0}'
-    method: 'get'
+    method: 'GET'
     exec:
       - security
+      - health
+
+  # k8s liveness probe without security
+  - path: '/health/liveness'
+    method: 'GET'
+    exec:
+      - health
+  # k8s readiness probe without security
+  - path: '/health/readiness'
+    method: 'GET'
+    exec:
       - health
 
   - path: '/server/info'

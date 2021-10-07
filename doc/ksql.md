@@ -107,7 +107,7 @@ Please refer [here](https://docs.ksqldb.io/en/latest/concepts/queries/) for deta
 - Pull queries do not support JOIN, PARTITION BY, GROUP BY and WINDOW clauses (but can query materialized tables that contain those clauses).
 
 
-If you query to against KStream or KTable which  created by using a CREATE TABLE statement, set the query type as "push". 
+If you query to against KStream or KTable which  created by using a CREATE TABLE statement, set the query type as "push".
 
 
 There is new request object has been added into light-kafka:
@@ -147,7 +147,7 @@ Sample request payload:
   required field, ksqlDB query string
 
 
-#### Sample request:
+#### Verify kafka sidecar ksql query locally:
 
 - Create a topic name as test:
 
