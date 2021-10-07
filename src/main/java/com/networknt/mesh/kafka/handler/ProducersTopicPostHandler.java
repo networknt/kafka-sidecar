@@ -14,6 +14,7 @@ import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.*;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.SidecarAuditHelper;
+import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.server.Server;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
@@ -66,7 +67,7 @@ import static java.util.Collections.singletonList;
  *
  * @author Steve Hu
  */
-public class ProducersTopicPostHandler implements LightHttpHandler {
+public class ProducersTopicPostHandler extends WriteAuditLog implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(ProducersTopicPostHandler.class);
     private static String STATUS_ACCEPTED = "SUC10202";
     private static String FAILED_TO_GET_SCHEMA = "ERR12208";
@@ -111,32 +112,6 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
         }
     }
 
-    /*
-    @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
-        if(logger.isDebugEnabled()) logger.debug("ProducerTopicPostHandler start");
-        // the topic is the path parameter, so it is required and cannot be null.
-        String topic = exchange.getQueryParameters().get("topic").getFirst();
-        logger.info("topic: " + topic);
-        // multiple messages in a list.
-        exchange.dispatch(exchange.getConnection().getWorker(), () -> {
-            Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
-            System.out.println("map = " + JsonMapper.toJson(map));
-            ProduceRequest produceRequest = Config.getInstance().getMapper().convertValue(map, ProduceRequest.class);
-            // populate the headers from HTTP headers.
-            Headers headers = populateHeaders(exchange, config, topic);
-            CompletableFuture<ProduceResponse> responseFuture =
-                    produceWithSchema(produceRequest.getFormat(), topic, Optional.empty(), produceRequest, headers);
-            responseFuture.whenCompleteAsync((response, throwable) -> {
-                System.out.println(response);
-                System.out.println(throwable);
-                exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
-                exchange.getResponseSender().send(JsonMapper.toJson(response));
-            });
-        });
-    }
-     */
-
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         if(ProducerStartupHook.producer != null) {
@@ -156,7 +131,7 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                 synchronized (auditRecords) {
                     if (auditRecords != null && auditRecords.size() > 0) {
                         auditRecords.forEach(ar -> {
-                            writeAuditLog(ar);
+                            writeAuditLog(ar, config.getAuditTarget(), config.getAuditTopic());
                         });
                         // clean up the audit entries
                         auditRecords.clear();
@@ -427,7 +402,7 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                         // we cannot call the writeAuditLog in the callback function. It needs to be processed with another thread.
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(createAuditRecord(null, exception, headers, false));
+                                auditRecords.add(auditFromRecordMetadata(null, exception, headers, false));
                             }
                         }
                         result.completeExceptionally(exception);
@@ -435,7 +410,7 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                         //writeAuditLog(metadata, null, headers, true);
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(createAuditRecord(metadata, null, headers, true));
+                                auditRecords.add(auditFromRecordMetadata(metadata, null, headers, true));
                             }
                         }
                         result.complete(ProduceResult.fromRecordMetadata(metadata));
@@ -443,50 +418,5 @@ public class ProducersTopicPostHandler implements LightHttpHandler {
                 });
         return result;
     }
-    private AuditRecord createAuditRecord(RecordMetadata rmd, Exception e, Headers headers, boolean produced) {
-        AuditRecord auditRecord = new AuditRecord();
-        auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
-        if(rmd != null) {
-            auditRecord.setTopic(rmd.topic());
-            auditRecord.setPartition(rmd.partition());
-            auditRecord.setOffset(rmd.offset());
-        } else {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            e.printStackTrace(pw);
-            auditRecord.setStacktrace(sw.toString());
-        }
-        Header cHeader = headers.lastHeader(Constants.CORRELATION_ID_STRING);
-        if(cHeader != null) {
-            auditRecord.setCorrelationId(new String(cHeader.value(), StandardCharsets.UTF_8));
-        }
 
-        Header tHeader = headers.lastHeader(Constants.TRACEABILITY_ID_STRING);
-        if(tHeader != null) {
-            auditRecord.setTraceabilityId(new String(tHeader.value(), StandardCharsets.UTF_8));
-        }
-        auditRecord.setAuditStatus(produced ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        return auditRecord;
-    }
-
-    private void writeAuditLog(AuditRecord auditRecord) {
-        if(KafkaProducerConfig.AUDIT_TARGET_TOPIC.equals(config.getAuditTarget())) {
-            try {
-                ProducerStartupHook.producer.send(
-                        new ProducerRecord<>(
-                                config.getAuditTopic(),
-                                null,
-                                System.currentTimeMillis(),
-                                auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8),
-                                JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
-                                null));
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        } else {
-            SidecarAuditHelper.logResult(auditRecord);
-        }
-    }
 }

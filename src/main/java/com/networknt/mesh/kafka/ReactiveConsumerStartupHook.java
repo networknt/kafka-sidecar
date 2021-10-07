@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
-public class ReactiveConsumerStartupHook implements StartupHookProvider {
+public class ReactiveConsumerStartupHook extends WriteAuditLog implements StartupHookProvider {
     private static Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     public static KafkaConsumerManager kafkaConsumerManager;
@@ -220,7 +220,7 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
                                  }
                              });
                  }
-                 if(config.isAuditEnabled()) writeAuditLog(result);
+                 if(config.isAuditEnabled())  auditLog(result, config.getAuditTarget(), config.getAuditTopic());
              }
          }
 
@@ -247,51 +247,5 @@ public class ReactiveConsumerStartupHook implements StartupHookProvider {
         }
 
         return headers;
-    }
-
-    private void writeAuditLog(RecordProcessedResult result) {
-        AuditRecord auditRecord = new AuditRecord();
-        auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.REACTIVE_CONSUMER);
-        auditRecord.setTopic(result.getRecord().getTopic());
-        auditRecord.setPartition(result.getRecord().getPartition());
-        auditRecord.setOffset(result.getRecord().getOffset());
-        String correlationId = null;
-        String traceabilityId = null;
-        Map<String, String> headers = result.getRecord().getHeaders();
-        if(headers != null) {
-            correlationId = headers.get(Constants.CORRELATION_ID_STRING);
-            if(correlationId == null) correlationId = result.getCorrelationId();
-            traceabilityId = headers.get(Constants.TRACEABILITY_ID_STRING);
-            if(traceabilityId == null) traceabilityId = result.getTraceabilityId();
-        } else {
-            correlationId = result.getCorrelationId();
-            traceabilityId = result.getTraceabilityId();
-        }
-        auditRecord.setCorrelationId(correlationId);
-        auditRecord.setTraceabilityId(traceabilityId);
-        auditRecord.setKey(result.getKey());
-        auditRecord.setAuditStatus(result.isProcessed() ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(config.getAuditTarget())) {
-            ProducerStartupHook.producer.send(
-                    new ProducerRecord<>(
-                            config.getAuditTopic(),
-                            null,
-                            System.currentTimeMillis(),
-                            auditRecord.getCorrelationId() != null ? auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey(),
-                            JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
-                            null),
-                    (metadata, exception) -> {
-                        if (exception != null) {
-                            // handle the exception by logging an error;
-                            logger.error("Exception:" + exception);
-                        } else {
-                            if(logger.isTraceEnabled()) logger.trace("Write to audit topic meta " + metadata.topic() + " " + metadata.partition() + " " + metadata.offset());
-                        }
-                    });
-        } else {
-            SidecarAuditHelper.logResult(auditRecord);
-        }
     }
 }

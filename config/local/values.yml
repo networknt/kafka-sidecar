@@ -1,6 +1,6 @@
 # producer format configuration
 kafka-producer.keyFormat: string
-kafka-producer.valueFormat: string
+kafka-producer.valueFormat: jsonschema
 
 # consumer format configuration
 kafka-consumer.topic: test6
