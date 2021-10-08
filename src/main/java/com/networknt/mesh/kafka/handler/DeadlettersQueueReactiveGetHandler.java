@@ -12,6 +12,7 @@ import com.networknt.kafka.entity.*;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.mesh.kafka.SidecarAuditHelper;
+import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.server.Server;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
@@ -38,7 +39,7 @@ import java.util.stream.Collectors;
 For more information on how to write business handlers, please check the link below.
 https://doc.networknt.com/development/business-handler/rest/
 */
-public class DeadlettersQueueReactiveGetHandler implements LightHttpHandler {
+public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(DeadlettersQueueReactiveGetHandler.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     long maxBytes = -1;
@@ -246,44 +247,10 @@ public class DeadlettersQueueReactiveGetHandler implements LightHttpHandler {
                                 }
                             });
                 }
-                if(config.isAuditEnabled()) writeAuditLog(result);
+                if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
             }
         }
 
-    }
-
-
-    private void writeAuditLog(RecordProcessedResult result) {
-        AuditRecord auditRecord = new AuditRecord();
-        auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.REACTIVE_CONSUMER);
-        auditRecord.setTopic(result.getRecord().getTopic());
-        auditRecord.setPartition(result.getRecord().getPartition());
-        auditRecord.setOffset(result.getRecord().getOffset());
-        auditRecord.setCorrelationId((String)result.getRecord().getHeaders().get("X-Correlation-Id"));
-        auditRecord.setTraceabilityId((String)result.getRecord().getHeaders().get("X-Traceability-Id"));
-        auditRecord.setAuditStatus(result.isProcessed() ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(config.getAuditTarget())) {
-            ProducerStartupHook.producer.send(
-                    new ProducerRecord<>(
-                            config.getAuditTopic(),
-                            null,
-                            System.currentTimeMillis(),
-                            auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8),
-                            JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
-                            null),
-                    (metadata, exception) -> {
-                        if (exception != null) {
-                            // handle the exception by logging an error;
-                            logger.error("Exception:" + exception);
-                        } else {
-                            if(logger.isTraceEnabled()) logger.trace("Write to audit topic meta " + metadata.topic() + " " + metadata.partition() + " " + metadata.offset());
-                        }
-                    });
-        } else {
-            SidecarAuditHelper.logResult(auditRecord);
-        }
     }
 
 }
