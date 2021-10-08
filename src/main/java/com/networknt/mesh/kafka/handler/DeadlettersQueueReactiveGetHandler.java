@@ -247,7 +247,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                                 }
                             });
                 }
-                if(config.isAuditEnabled())  auditLog(result, config.getAuditTarget(), config.getAuditTopic());
+                if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
             }
         }
 

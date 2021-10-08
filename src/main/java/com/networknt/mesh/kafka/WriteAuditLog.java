@@ -22,16 +22,19 @@ import java.util.UUID;
 public class WriteAuditLog {
     private static final Logger logger = LoggerFactory.getLogger(WriteAuditLog.class);
 
-    protected void auditLog(RecordProcessedResult result, String auditTarget, String auditTopic) {
-        writeAuditLog(auditFromRecordProcessedResult(result), auditTarget, auditTopic);
+    protected void activeConsumerAuditLog(RecordProcessedResult result, String auditTarget, String auditTopic) {
+        writeAuditLog(auditFromRecordProcessedResult(result, AuditRecord.AuditType.ACTIVE_CONSUMER), auditTarget, auditTopic);
     }
 
+    protected void reactiveConsumerAuditLog(RecordProcessedResult result, String auditTarget, String auditTopic) {
+        writeAuditLog(auditFromRecordProcessedResult(result,AuditRecord.AuditType.REACTIVE_CONSUMER), auditTarget, auditTopic);
+    }
 
-    protected AuditRecord auditFromRecordProcessedResult(RecordProcessedResult result) {
+    protected AuditRecord auditFromRecordProcessedResult(RecordProcessedResult result, AuditRecord.AuditType auditType) {
         AuditRecord auditRecord = new AuditRecord();
         auditRecord.setId(UUID.randomUUID().toString());
         auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.ACTIVE_CONSUMER);
+        auditRecord.setAuditType(auditType);
         auditRecord.setTopic(result.getRecord().getTopic());
         auditRecord.setPartition(result.getRecord().getPartition());
         auditRecord.setOffset(result.getRecord().getOffset());

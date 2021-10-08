@@ -49,7 +49,7 @@ public class ConsumersActiveAuditPostHandler extends WriteAuditLog implements Li
             exchange.dispatch();
             try {
                 List<AuditRecord> auditRecords = recordProcessedResultList.stream().map(r->{
-                    AuditRecord auditRecord = auditFromRecordProcessedResult(r);
+                    AuditRecord auditRecord = auditFromRecordProcessedResult(r, AuditRecord.AuditType.ACTIVE_CONSUMER);
                     writeAuditLog(auditRecord, config.getAuditTarget(), config.getAuditTopic());
                     return auditRecord;
                 }).collect(Collectors.toList());

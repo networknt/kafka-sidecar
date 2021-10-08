@@ -95,7 +95,7 @@ public class DeadlettersQueueActivePostHandler extends WriteAuditLog implements 
                         result.completeExceptionally(exception);
                     } else {
                         if(config.isAuditEnabled()) {
-                            auditLog(recordProcessedResult, config.getAuditTarget(), config.getAuditTopic());
+                            activeConsumerAuditLog(recordProcessedResult, config.getAuditTarget(), config.getAuditTopic());
                         }
                         result.complete(ProduceResult.fromRecordMetadata(metadata));
                     }

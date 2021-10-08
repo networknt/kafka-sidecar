@@ -220,7 +220,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                  }
                              });
                  }
-                 if(config.isAuditEnabled())  auditLog(result, config.getAuditTarget(), config.getAuditTopic());
+                 if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
              }
          }
 
