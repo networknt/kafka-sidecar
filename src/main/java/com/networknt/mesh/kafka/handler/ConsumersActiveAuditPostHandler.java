@@ -48,7 +48,7 @@ public class ConsumersActiveAuditPostHandler extends WriteAuditLog implements Li
         if(ProducerStartupHook.producer != null) {
             exchange.dispatch();
             try {
-                List<AuditRecord> auditRecords = recordProcessedResultList.stream().map(r->{
+                List<AuditRecord> auditRecords = recordProcessedResultList.stream().map(r-> {
                     AuditRecord auditRecord = auditFromRecordProcessedResult(r, AuditRecord.AuditType.ACTIVE_CONSUMER);
                     writeAuditLog(auditRecord, config.getAuditTarget(), config.getAuditTopic());
                     return auditRecord;

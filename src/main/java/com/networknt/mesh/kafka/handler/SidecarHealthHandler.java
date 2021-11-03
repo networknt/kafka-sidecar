@@ -119,7 +119,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
                     connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getDownstreamHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
                 }
             } catch (Exception ex) {
-                logger.error("Could not create connection to the backend:", ex);
+                logger.error("Could not create connection to the backend: " + config.getDownstreamHost() + ":", ex);
                 result = HEALTH_RESULT_ERROR;
                 // if connection cannot be established, return error. The backend is not started yet.
                 return result;
