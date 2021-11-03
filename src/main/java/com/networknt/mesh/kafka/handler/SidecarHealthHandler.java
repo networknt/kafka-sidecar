@@ -121,6 +121,8 @@ public class SidecarHealthHandler implements LightHttpHandler {
             } catch (Exception ex) {
                 logger.error("Could not create connection to the backend:", ex);
                 result = HEALTH_RESULT_ERROR;
+                // if connection cannot be established, return error. The backend is not started yet.
+                return result;
             }
         }
         final CountDownLatch latch = new CountDownLatch(1);
@@ -140,6 +142,11 @@ public class SidecarHealthHandler implements LightHttpHandler {
             }
         } catch (Exception exception) {
             logger.error("Error while sending a health check request to the backend with exception: ", exception);
+            // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
+            // the connection if there are any exception here to work around the spring boot backend.
+            if(connection != null && connection.isOpen()) {
+                try { connection.close(); } catch (Exception e) { logger.error("Exception:", e); }
+            }
             result = HEALTH_RESULT_ERROR;
         }
         long responseTime = System.currentTimeMillis() - start;
