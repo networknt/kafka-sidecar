@@ -7,7 +7,6 @@ import com.networknt.exception.FrameworkException;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
-import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.Constants;
 import io.undertow.UndertowOptions;
@@ -166,7 +165,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                         // The body will contains RecordProcessedResult for dead letter queue and audit.
                                         // Write the dead letter queue if necessary.
                                         if(logger.isInfoEnabled()) logger.info("Got successful response from the backend API");
-                                        processResponse(body);
+                                        processResponse(body, statusCode, records.size());
                                         // commit the batch offset here.
                                         kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
                                         readyForNextBatch = true;
@@ -197,9 +196,15 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         if(logger.isDebugEnabled()) logger.debug("Rollback to topic " + firstRecord.getTopic() + " partition " + firstRecord.getPartition() + " offset " + firstRecord.getOffset());
     }
 
-    private void processResponse(String responseBody) {
+    private void processResponse(String responseBody, int statusCode, int recordSize) {
          if(responseBody != null) {
              List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
+             if(results.size() != recordSize) {
+                 // if the string2List failed, then a RuntimeException has thrown already.
+                 // https://github.com/networknt/kafka-sidecar/issues/70 if the response size doesn't match the record size
+                 logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
+                 throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
+             }
              for(int i = 0; i < results.size(); i ++) {
                  RecordProcessedResult result = Config.getInstance().getMapper().convertValue(results.get(i), RecordProcessedResult.class);
                  if(config.isDeadLetterEnabled() && !result.isProcessed()) {
@@ -222,6 +227,11 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                  }
                  if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
              }
+         } else {
+             // https://github.com/networknt/kafka-sidecar/issues/70 to check developers errors.
+             // throws exception if the body is empty when the response code is successful.
+             logger.error("Response body is empty with success status code is " + statusCode);
+             throw new RuntimeException("Response Body is empty with success status code " + statusCode);
          }
 
     }
