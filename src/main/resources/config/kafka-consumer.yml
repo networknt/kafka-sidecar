@@ -11,7 +11,7 @@ properties:
   # Schema registry url
   schema.registry.url: ${kafka-consumer.schema.registry.url:http://localhost:8081}
   # Schema registry auto register schema indicator for streams application. If true, the first request will register the schema auto automatically.
-  schema.registry.auto.register.schemas: ${kafka-consumer.schema.registry.auto.register.schemas:true}
+  schema.registry.auto.register.schemas: ${kafka-consumer.schema.registry.auto.register.schemas:false}
   # Schema registry client truststore location, use the following two properties only if schema registry url is https.
   schema.registry.ssl.truststore.location: ${kafka-consumer.schema.registry.ssl.truststore.location:/config/client.truststore}
   # Schema registry client truststore password
@@ -20,8 +20,8 @@ properties:
   security.protocol: ${kafka-consumer.security.protocol:SASL_SSL}
   sasl.mechanism: ${kafka-consumer.sasl.mechanism:PLAIN}
   sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-consumer.username:username}\" password=\"${KAFKA_CONSUMER_PASSWORD:password}\";"
-  ssl.truststore.location: ${kafka-consumer.ssl.truststore.location:/truststore/kafka.server.truststore.jks}
-  ssl.truststore.password: ${kafka-consumer.ssl.truststore.password:changeme}
+  ssl.truststore.location: ${kafka-consumer.ssl.truststore.location:/config/client.truststore}
+  ssl.truststore.password: ${kafka-consumer.ssl.truststore.password:password}
   ssl.endpoint.identification.algorithm: ${kafka-consumer.ssl.endpoint.identification.algorithm:algo-name}
   # Apache Kafka 2.3 clients or later will then read from followers that have matching broker.rack as the specified client.rack ID.
   client.rack: ${kafka-consumer.client.rack:rack-name}
