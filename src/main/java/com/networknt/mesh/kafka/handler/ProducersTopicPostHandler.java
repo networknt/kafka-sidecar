@@ -128,6 +128,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             CompletableFuture<ProduceResponse> responseFuture = produceWithSchema(topic, Optional.empty(), produceRequest, headers);
             responseFuture.whenCompleteAsync((response, throwable) -> {
                 // write the audit log here.
+                long startAudit = System.currentTimeMillis();
                 synchronized (auditRecords) {
                     if (auditRecords != null && auditRecords.size() > 0) {
                         auditRecords.forEach(ar -> {
@@ -138,7 +139,8 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                     }
                 }
                 if(logger.isDebugEnabled()) {
-                    logger.debug("ProducerTopicPostHandler handleRequest produce to Kafka in " + (System.currentTimeMillis() - start));
+                    logger.debug("Writing audit log takes " + (System.currentTimeMillis() - startAudit));
+                    logger.debug("ProducerTopicPostHandler handleRequest total time is " + (System.currentTimeMillis() - start));
                 }
                 exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
                 exchange.getResponseSender().send(JsonMapper.toJson(response));
@@ -175,6 +177,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             ProduceRequest request,
             Headers headers) {
         // get key schema based on different scenarios.
+        long startSchema = System.currentTimeMillis();
         Optional<RegisteredSchema> keySchema =
                 getSchema(
                         topicName,
@@ -211,9 +214,14 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         keySchema,
                         valueSchema,
                         request.getRecords());
-
+        if(logger.isDebugEnabled()) {
+            logger.debug("Serializing key and value with schema registry takes " + (System.currentTimeMillis() - startSchema));
+        }
+        long startProduce = System.currentTimeMillis();
         List<CompletableFuture<ProduceResult>> resultFutures = doProduce(topicName, serialized, headers);
-
+        if(logger.isDebugEnabled()) {
+            logger.debug("Producing the entire batch to Kafka takes " + (System.currentTimeMillis() - startProduce));
+        }
         return produceResultsToResponse(keySchema, valueSchema, resultFutures);
     }
 
