@@ -13,9 +13,7 @@ import com.networknt.kafka.common.KafkaProducerConfig;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.*;
 import com.networknt.mesh.kafka.ProducerStartupHook;
-import com.networknt.mesh.kafka.SidecarAuditHelper;
 import com.networknt.mesh.kafka.WriteAuditLog;
-import com.networknt.server.Server;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
@@ -32,19 +30,15 @@ import io.opentracing.propagation.Format;
 import io.opentracing.tag.Tags;
 import io.undertow.server.HttpServerExchange;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.KafkaException;
 import org.apache.kafka.common.errors.AuthenticationException;
 import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.RetriableException;
-import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.*;
@@ -124,6 +118,13 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             exchange.dispatch();
             Map<String, Object> map = (Map) exchange.getAttachment(BodyHandler.REQUEST_BODY);
             ProduceRequest produceRequest = Config.getInstance().getMapper().convertValue(map, ProduceRequest.class);
+            // populate the keyFormat and valueFormat from kafka-producer.yml if request doesn't have them.
+            if(produceRequest.getKeyFormat().isEmpty() && config.getKeyFormat() != null) {
+                produceRequest.setKeyFormat(Optional.of(EmbeddedFormat.valueOf(config.getKeyFormat().toUpperCase())));
+            }
+            if(produceRequest.getValueFormat().isEmpty() && config.getValueFormat() != null) {
+                produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
+            }
             Headers headers = populateHeaders(exchange, config, topic);
             CompletableFuture<ProduceResponse> responseFuture = produceWithSchema(topic, Optional.empty(), produceRequest, headers);
             responseFuture.whenCompleteAsync((response, throwable) -> {
@@ -150,27 +151,6 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
         }
     }
 
-    /*
-    working
-    @Override
-    public void handleRequest(HttpServerExchange exchange) throws Exception {
-        if(logger.isDebugEnabled()) logger.debug("ProducerTopicPostHandler start");
-        // the topic is the path parameter, so it is required and cannot be null.
-        String topic = exchange.getQueryParameters().get("topic").getFirst();
-        logger.info("topic: " + topic);
-        exchange.getRequestReceiver().receiveFullString((exchange1, message) ->{
-            ProduceRequest produceRequest = JsonMapper.fromJson(message, ProduceRequest.class);
-            CompletableFuture<ProduceResponse> responseFuture =
-                    produceWithSchema(produceRequest.getFormat(), topic, Optional.empty(), produceRequest);
-            exchange1.dispatch();
-            responseFuture.whenCompleteAsync((response, throwable) -> {
-                exchange1.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                exchange1.getResponseSender().send(JsonMapper.toJson(response));
-            });
-        });
-    }
-    */
-
     final CompletableFuture<ProduceResponse> produceWithSchema(
             String topicName,
             Optional<Integer> partition,
@@ -178,29 +158,51 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             Headers headers) {
         // get key schema based on different scenarios.
         long startSchema = System.currentTimeMillis();
-        Optional<RegisteredSchema> keySchema =
-                getSchema(
-                        topicName,
-                        request.getKeyFormat(),
-                        request.getKeySchemaSubject(),
-                        request.getKeySchemaId(),
-                        request.getKeySchemaVersion(),
-                        request.getKeySchema(),
-                        /* isKey= */ true);
+        Optional<RegisteredSchema> keySchema = Optional.empty();
+        if(request.getKeySchemaId().isPresent()) {
+            // get from the cache first if keySchemaId is not empty.
+            keySchema = ProducerStartupHook.schemaCache.get(topicName + "k" + request.getKeySchemaId().get());
+            if(keySchema == null) keySchema = Optional.empty();
+        }
+        if(keySchema.isEmpty() && request.getKeyFormat().isPresent() && request.getKeyFormat().get().requiresSchema()) {
+            keySchema =
+                    getSchema(
+                            topicName,
+                            request.getKeyFormat(),
+                            request.getKeySchemaSubject(),
+                            request.getKeySchemaId(),
+                            request.getKeySchemaVersion(),
+                            request.getKeySchema(),
+                            /* isKey= */ true);
+            if(keySchema.isPresent() && request.getKeySchemaId().isPresent()) {
+                ProducerStartupHook.schemaCache.put(topicName + "k" + request.getKeySchemaId().get(), keySchema);
+            }
+        }
         Optional<EmbeddedFormat> keyFormat =
                 keySchema.map(schema -> Optional.of(schema.getFormat()))
                         .orElse(request.getKeyFormat());
 
         // get value schema based on different scenarios.
-        Optional<RegisteredSchema> valueSchema =
-                getSchema(
-                        topicName,
-                        request.getValueFormat(),
-                        request.getValueSchemaSubject(),
-                        request.getValueSchemaId(),
-                        request.getValueSchemaVersion(),
-                        request.getValueSchema(),
-                        /* isKey= */ false);
+        Optional<RegisteredSchema> valueSchema = Optional.empty();
+        if(request.getValueSchemaId().isPresent()) {
+            // get from the cache first.
+            valueSchema = ProducerStartupHook.schemaCache.get(topicName + "v" + request.getValueSchemaId().get());
+            if(valueSchema == null) valueSchema = Optional.empty();
+        }
+        if(valueSchema.isEmpty() && request.getValueFormat().isPresent() && request.getValueFormat().get().requiresSchema()) {
+            valueSchema =
+                    getSchema(
+                            topicName,
+                            request.getValueFormat(),
+                            request.getValueSchemaSubject(),
+                            request.getValueSchemaId(),
+                            request.getValueSchemaVersion(),
+                            request.getValueSchema(),
+                            /* isKey= */ false);
+            if(valueSchema.isPresent() && request.getValueSchemaId().isPresent()) {
+                ProducerStartupHook.schemaCache.put(topicName + "v" + request.getValueSchemaId().get(), valueSchema);
+            }
+        }
         Optional<EmbeddedFormat> valueFormat =
                 valueSchema.map(schema -> Optional.of(schema.getFormat()))
                         .orElse(request.getValueFormat());
