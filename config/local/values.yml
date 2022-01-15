@@ -1,3 +1,7 @@
+# server configuration
+server.enableHttp: false
+server.httpsPort: 9443
+
 # producer format configuration
 kafka-producer.keyFormat: string
 kafka-producer.valueFormat: jsonschema

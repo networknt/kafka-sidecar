@@ -50,7 +50,7 @@ topic: ${kafka-producer.topic:test1}
 keyFormat: ${kafka-producer.keyFormat:jsonschema}
 # Default value format if no schema for the topic value
 valueFormat: ${kafka-producer.valueFormat:jsonschema}
-# If open tracing is enable. traceability, correlation and metrics should not be in the chain if opentracing is used.
+# If open tracing is enabled. traceability, correlation and metrics should not be in the chain if opentracing is used.
 injectOpenTracing: ${kafka-producer.injectOpenTracing:false}
 # Inject serviceId as callerId into the http header for metrics to collect the caller. The serviceId is from server.yml
 injectCallerId: ${kafka-producer.injectCallerId:false}
