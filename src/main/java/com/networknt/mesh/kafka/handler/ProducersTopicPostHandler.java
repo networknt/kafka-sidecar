@@ -308,6 +308,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         record ->
                                 new SerializedKeyAndValue(
                                         record.getPartition().map(Optional::of).orElse(partition),
+                                        record.getTraceabilityId(),
                                         keyFormat.isPresent() && keyFormat.get().requiresSchema() ?
                                         schemaRecordSerializer
                                                 .serialize(
@@ -338,6 +339,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         record -> produce(
                                 topicName,
                                 record.getPartitionId(),
+                                record.getTraceabilityId(),
                                 headers,
                                 record.getKey(),
                                 record.getValue(),
@@ -417,10 +419,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
         } else {
             String cid = exchange.getRequestHeaders().getFirst(HttpStringConstants.CORRELATION_ID);
             headers.add(Constants.CORRELATION_ID_STRING, cid.getBytes(StandardCharsets.UTF_8));
-            String tid = exchange.getRequestHeaders().getFirst(HttpStringConstants.TRACEABILITY_ID);
-            if(tid != null) {
-                headers.add(Constants.TRACEABILITY_ID_STRING, tid.getBytes(StandardCharsets.UTF_8));
-            }
+            // remove the traceabilityId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
         }
         if(config.isInjectCallerId()) {
             headers.add(Constants.CALLER_ID_STRING, callerId.getBytes(StandardCharsets.UTF_8));
@@ -431,11 +430,19 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
     public CompletableFuture<ProduceResult> produce(
             String topicName,
             Optional<Integer> partitionId,
+            Optional<String> traceabilityId,
             Headers headers,
             Optional<ByteString> key,
             Optional<ByteString> value,
             Instant timestamp
     ) {
+        // populate the headers with the traceabilityId if it is not empty.
+        if(traceabilityId.isPresent()) {
+            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record
+            headers.add(Constants.TRACEABILITY_ID_STRING, traceabilityId.get().getBytes(StandardCharsets.UTF_8));
+        } else {
+            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record
+        }
         CompletableFuture<ProduceResult> result = new CompletableFuture<>();
         ProducerStartupHook.producer.send(
                 new ProducerRecord<>(
