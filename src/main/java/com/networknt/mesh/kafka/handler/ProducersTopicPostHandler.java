@@ -162,8 +162,19 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
         if(request.getKeySchemaId().isPresent()) {
             // get from the cache first if keySchemaId is not empty.
             keySchema = ProducerStartupHook.schemaCache.get(topicName + "k" + request.getKeySchemaId().get());
-            if(keySchema == null) keySchema = Optional.empty();
+        } else if (request.getKeySchemaVersion().isPresent()) {
+            // get form the cache first if KeySchemaVersion is not empty
+            if(request.getKeySchemaSubject().isPresent()) {
+                // use the supplied subject
+                keySchema = ProducerStartupHook.schemaCache.get(request.getKeySchemaSubject().get() + request.getKeySchemaVersion().get());
+            } else {
+                // default to topic + isKey
+                keySchema = ProducerStartupHook.schemaCache.get(topicName + "k" + request.getKeySchemaVersion().get());
+            }
         }
+        // reset the KeySchema as the cache will return null if the entry doesn't exist.
+        if(keySchema == null) keySchema = Optional.empty();
+
         if(keySchema.isEmpty() && request.getKeyFormat().isPresent() && request.getKeyFormat().get().requiresSchema()) {
             keySchema =
                     getSchema(
@@ -174,8 +185,16 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                             request.getKeySchemaVersion(),
                             request.getKeySchema(),
                             /* isKey= */ true);
-            if(keySchema.isPresent() && request.getKeySchemaId().isPresent()) {
-                ProducerStartupHook.schemaCache.put(topicName + "k" + request.getKeySchemaId().get(), keySchema);
+            if(keySchema.isPresent()) {
+                if(request.getKeySchemaId().isPresent()) {
+                    ProducerStartupHook.schemaCache.put(topicName + "k" + request.getKeySchemaId().get(), keySchema);
+                } else if(request.getKeySchemaVersion().isPresent()) {
+                    if(request.getKeySchemaSubject().isPresent()) {
+                        ProducerStartupHook.schemaCache.put(request.getKeySchemaSubject().get() + request.getKeySchemaVersion().get(), keySchema);
+                    } else {
+                        ProducerStartupHook.schemaCache.put(topicName + "k" + request.getKeySchemaVersion().get(), keySchema);
+                    }
+                }
             }
         }
         Optional<EmbeddedFormat> keyFormat =
@@ -185,10 +204,21 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
         // get value schema based on different scenarios.
         Optional<RegisteredSchema> valueSchema = Optional.empty();
         if(request.getValueSchemaId().isPresent()) {
-            // get from the cache first.
+            // get from the cache first if ValueSchemaId is not empty
             valueSchema = ProducerStartupHook.schemaCache.get(topicName + "v" + request.getValueSchemaId().get());
-            if(valueSchema == null) valueSchema = Optional.empty();
+        } else if (request.getValueSchemaVersion().isPresent()) {
+            // get from the cache first if ValueSchemaVersion is not empty
+            if(request.getValueSchemaSubject().isPresent()) {
+                // use the supplied subject
+                valueSchema = ProducerStartupHook.schemaCache.get(request.getValueSchemaSubject().get() + request.getValueSchemaVersion().get());
+            } else {
+                // default to topic + isKey
+                valueSchema = ProducerStartupHook.schemaCache.get(topicName + "v" + request.getValueSchemaVersion().get());
+            }
         }
+        // reset the valueSchema as the cache will return null if the entry doesn't exist.
+        if(valueSchema == null) valueSchema = Optional.empty();
+
         if(valueSchema.isEmpty() && request.getValueFormat().isPresent() && request.getValueFormat().get().requiresSchema()) {
             valueSchema =
                     getSchema(
@@ -199,8 +229,16 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                             request.getValueSchemaVersion(),
                             request.getValueSchema(),
                             /* isKey= */ false);
-            if(valueSchema.isPresent() && request.getValueSchemaId().isPresent()) {
-                ProducerStartupHook.schemaCache.put(topicName + "v" + request.getValueSchemaId().get(), valueSchema);
+            if(valueSchema.isPresent()) {
+                if(request.getValueSchemaId().isPresent()) {
+                    ProducerStartupHook.schemaCache.put(topicName + "v" + request.getValueSchemaId().get(), valueSchema);
+                } else if(request.getValueSchemaVersion().isPresent()) {
+                    if(request.getValueSchemaSubject().isPresent()) {
+                        ProducerStartupHook.schemaCache.put(request.getValueSchemaSubject().get() + request.getValueSchemaVersion().get(), valueSchema);
+                    } else {
+                        ProducerStartupHook.schemaCache.put(topicName + "v" + request.getValueSchemaVersion().get(), valueSchema);
+                    }
+                }
             }
         }
         Optional<EmbeddedFormat> valueFormat =
