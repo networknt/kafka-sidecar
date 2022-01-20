@@ -210,6 +210,11 @@
         </dependency>
         <dependency>
             <groupId>com.networknt</groupId>
+            <artifactId>kafka-common</artifactId>
+            <version>${version.light-4j}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.networknt</groupId>
             <artifactId>kafka-entity</artifactId>
             <version>${version.light-4j}</version>
         </dependency>
