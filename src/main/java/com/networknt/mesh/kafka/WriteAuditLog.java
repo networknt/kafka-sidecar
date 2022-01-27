@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.google.protobuf.ByteString;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
@@ -17,6 +18,7 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 public class WriteAuditLog {
@@ -58,7 +60,7 @@ public class WriteAuditLog {
         return auditRecord;
     }
 
-    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Headers headers, boolean produced) {
+    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Headers headers, Optional<ByteString> key, boolean produced) {
         AuditRecord auditRecord = new AuditRecord();
         auditRecord.setId(UUID.randomUUID().toString());
         auditRecord.setServiceId(Server.getServerConfig().getServiceId());
@@ -84,6 +86,7 @@ public class WriteAuditLog {
         }
         auditRecord.setAuditStatus(produced ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
         auditRecord.setTimestamp(System.currentTimeMillis());
+        if(key.isPresent()) auditRecord.setKey(key.get().toString(StandardCharsets.UTF_8));
         return auditRecord;
     }
 
@@ -94,7 +97,7 @@ public class WriteAuditLog {
                             auditTopic,
                             null,
                             System.currentTimeMillis(),
-                            auditRecord.getCorrelationId() != null ? auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey(),
+                            auditRecord.getTraceabilityId() != null ? auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey(),
                             JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
                             null),
                     (metadata, exception) -> {
