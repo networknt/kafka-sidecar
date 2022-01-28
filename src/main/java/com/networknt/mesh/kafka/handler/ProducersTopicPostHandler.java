@@ -457,7 +457,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         // we cannot call the writeAuditLog in the callback function. It needs to be processed with another thread.
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(auditFromRecordMetadata(null, exception, headers, key, false));
+                                auditRecords.add(auditFromRecordMetadata(null, exception, headers, key, traceabilityId, false));
                             }
                         }
                         result.completeExceptionally(exception);
@@ -465,7 +465,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         //writeAuditLog(metadata, null, headers, true);
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(auditFromRecordMetadata(metadata, null, headers, key, true));
+                                auditRecords.add(auditFromRecordMetadata(metadata, null, headers, key, traceabilityId, true));
                             }
                         }
                         result.complete(ProduceResult.fromRecordMetadata(metadata));
