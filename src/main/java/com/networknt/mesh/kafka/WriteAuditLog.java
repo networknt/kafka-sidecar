@@ -60,7 +60,7 @@ public class WriteAuditLog {
         return auditRecord;
     }
 
-    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Headers headers, Optional<ByteString> key, boolean produced) {
+    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Headers headers, Optional<ByteString> key, Optional<String> traceabilityId, boolean produced) {
         AuditRecord auditRecord = new AuditRecord();
         auditRecord.setId(UUID.randomUUID().toString());
         auditRecord.setServiceId(Server.getServerConfig().getServiceId());
@@ -80,10 +80,10 @@ public class WriteAuditLog {
             auditRecord.setCorrelationId(new String(cHeader.value(), StandardCharsets.UTF_8));
         }
 
-        Header tHeader = headers.lastHeader(Constants.TRACEABILITY_ID_STRING);
-        if(tHeader != null) {
-            auditRecord.setTraceabilityId(new String(tHeader.value(), StandardCharsets.UTF_8));
+        if(traceabilityId.isPresent()) {
+            auditRecord.setTraceabilityId(traceabilityId.get());
         }
+
         auditRecord.setAuditStatus(produced ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
         auditRecord.setTimestamp(System.currentTimeMillis());
         if(key.isPresent()) auditRecord.setKey(key.get().toString(StandardCharsets.UTF_8));
