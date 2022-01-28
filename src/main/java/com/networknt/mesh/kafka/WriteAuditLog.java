@@ -97,7 +97,7 @@ public class WriteAuditLog {
                             auditTopic,
                             null,
                             System.currentTimeMillis(),
-                            auditRecord.getTraceabilityId() != null ? auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey(),
+                            auditRecord.getTraceabilityId() != null ? auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey().getBytes(StandardCharsets.UTF_8),
                             JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
                             null),
                     (metadata, exception) -> {
