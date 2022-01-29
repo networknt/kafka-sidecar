@@ -92,7 +92,7 @@ public class WriteAuditLog {
 
     protected void writeAuditLog(AuditRecord auditRecord, String auditTarget, String auditTopic) {
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(auditTarget)) {
-            ProducerStartupHook.producer.send(
+            AuditProducerStartupHook.auditProducer.send(
                     new ProducerRecord<>(
                             auditTopic,
                             null,
