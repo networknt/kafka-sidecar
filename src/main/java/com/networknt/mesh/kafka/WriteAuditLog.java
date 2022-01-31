@@ -9,8 +9,6 @@ import com.networknt.server.Server;
 import com.networknt.utility.Constants;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-import org.apache.kafka.common.header.Header;
-import org.apache.kafka.common.header.Headers;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +58,7 @@ public class WriteAuditLog {
         return auditRecord;
     }
 
-    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Headers headers, Optional<ByteString> key, Optional<String> traceabilityId, boolean produced) {
+    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Optional<ByteString> key, Optional<String> traceabilityId, Optional<String> correlationId, boolean produced) {
         AuditRecord auditRecord = new AuditRecord();
         auditRecord.setId(UUID.randomUUID().toString());
         auditRecord.setServiceId(Server.getServerConfig().getServiceId());
@@ -75,11 +73,9 @@ public class WriteAuditLog {
             e.printStackTrace(pw);
             auditRecord.setStacktrace(sw.toString());
         }
-        Header cHeader = headers.lastHeader(Constants.CORRELATION_ID_STRING);
-        if(cHeader != null) {
-            auditRecord.setCorrelationId(new String(cHeader.value(), StandardCharsets.UTF_8));
+        if(correlationId.isPresent()) {
+            auditRecord.setCorrelationId((correlationId.get()));
         }
-
         if(traceabilityId.isPresent()) {
             auditRecord.setTraceabilityId(traceabilityId.get());
         }
@@ -92,23 +88,14 @@ public class WriteAuditLog {
 
     protected void writeAuditLog(AuditRecord auditRecord, String auditTarget, String auditTopic) {
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(auditTarget)) {
-            // The key of the audit record will be traceabilityId, original key and correlationId in sequence if the previous value is empty.
-            byte[] key = null;
-            if(auditRecord.getTraceabilityId() != null) {
-                key = auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8);
-            } else {
-                if(auditRecord.getKey() != null) {
-                    key = auditRecord.getKey().getBytes(StandardCharsets.UTF_8);
-                } else {
-                    key = auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8);
-                }
-            }
+            // since both the traceabilityId and original message key can be empty, we are using the correlationId as the key
+            // the correlationId won't be null as it will be created in that case for each record.
             AuditProducerStartupHook.auditProducer.send(
                     new ProducerRecord<>(
                             auditTopic,
                             null,
                             System.currentTimeMillis(),
-                            key,
+                            auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8),
                             JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
                             null),
                     (metadata, exception) -> {

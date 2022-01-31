@@ -18,6 +18,7 @@ import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.kafka.entity.EmbeddedFormat;
+import com.networknt.utility.Util;
 import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
 import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
@@ -36,6 +37,7 @@ import org.apache.kafka.common.errors.AuthorizationException;
 import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
+import org.checkerframework.checker.nullness.Opt;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +54,7 @@ import static java.util.Collections.singletonList;
  * into a kafka topic as path parameter in a transaction. Only when the message is successfully
  * acknowledged from Kafka, the response will be sent to the caller. This will guarantee that no
  * message will be missed in the process. However, due to the network issue, sometimes, the ack
- * might not received by the caller after the messages are persisted. So duplicated message might
+ * might not receive by the caller after the messages are persisted. So duplicated message might
  * be received, the handle will have a queue to cache the last several messages to remove duplicated
  * message possible.
  *
@@ -309,6 +311,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                                 new SerializedKeyAndValue(
                                         record.getPartition().map(Optional::of).orElse(partition),
                                         record.getTraceabilityId(),
+                                        record.getCorrelationId(),
                                         keyFormat.isPresent() && keyFormat.get().requiresSchema() ?
                                         schemaRecordSerializer
                                                 .serialize(
@@ -340,6 +343,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                                 topicName,
                                 record.getPartitionId(),
                                 record.getTraceabilityId(),
+                                record.getCorrelationId().isPresent() ? record.getCorrelationId() : Optional.of(Util.getUUID()),
                                 headers,
                                 record.getKey(),
                                 record.getValue(),
@@ -410,17 +414,18 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             headers.add(Constants.AUTHORIZATION_STRING, token.getBytes(StandardCharsets.UTF_8));
         }
         if(config.isInjectOpenTracing()) {
+            // maybe we should move this to the ProduceRecord in the future like the correlationId and traceabilityId.
             Tracer tracer = exchange.getAttachment(AttachmentConstants.EXCHANGE_TRACER);
             if(tracer != null && tracer.activeSpan() != null) {
                 Tags.SPAN_KIND.set(tracer.activeSpan(), Tags.SPAN_KIND_PRODUCER);
                 Tags.MESSAGE_BUS_DESTINATION.set(tracer.activeSpan(), topic);
                 tracer.inject(tracer.activeSpan().context(), Format.Builtin.TEXT_MAP, new KafkaHeadersCarrier(headers));
             }
-        } else {
-            String cid = exchange.getRequestHeaders().getFirst(HttpStringConstants.CORRELATION_ID);
-            headers.add(Constants.CORRELATION_ID_STRING, cid.getBytes(StandardCharsets.UTF_8));
-            // remove the traceabilityId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
         }
+
+        // remove the correlationId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
+        // remove the traceabilityId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
+
         if(config.isInjectCallerId()) {
             headers.add(Constants.CALLER_ID_STRING, callerId.getBytes(StandardCharsets.UTF_8));
         }
@@ -431,6 +436,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             String topicName,
             Optional<Integer> partitionId,
             Optional<String> traceabilityId,
+            Optional<String> correlationId,
             Headers headers,
             Optional<ByteString> key,
             Optional<ByteString> value,
@@ -438,11 +444,18 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
     ) {
         // populate the headers with the traceabilityId if it is not empty.
         if(traceabilityId.isPresent()) {
-            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record
+            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record as the headers is shard.
             headers.add(Constants.TRACEABILITY_ID_STRING, traceabilityId.get().getBytes(StandardCharsets.UTF_8));
         } else {
-            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record
+            headers.remove(Constants.TRACEABILITY_ID_STRING); // remove the entry populated by the previous record as the headers is shard.
         }
+        // populate the headers with the correlationId. The correlationId here will have a value as it is created in the caller if necessary.
+        headers.remove(Constants.CORRELATION_ID_STRING); // remove the entry populated by the previous record as the headers is shard.
+        headers.add(Constants.CORRELATION_ID_STRING, correlationId.get().getBytes(StandardCharsets.UTF_8));
+        if(traceabilityId.isPresent()) {
+            logger.info("Associate traceability Id " + traceabilityId.get() + " with correlation Id " + correlationId.get());
+        }
+
         CompletableFuture<ProduceResult> result = new CompletableFuture<>();
         ProducerStartupHook.producer.send(
                 new ProducerRecord<>(
@@ -457,7 +470,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         // we cannot call the writeAuditLog in the callback function. It needs to be processed with another thread.
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(auditFromRecordMetadata(null, exception, headers, key, traceabilityId, false));
+                                auditRecords.add(auditFromRecordMetadata(null, exception, key, traceabilityId, correlationId, false));
                             }
                         }
                         result.completeExceptionally(exception);
@@ -465,7 +478,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                         //writeAuditLog(metadata, null, headers, true);
                         if(config.isAuditEnabled()) {
                             synchronized (auditRecords) {
-                                auditRecords.add(auditFromRecordMetadata(metadata, null, headers, key, traceabilityId, true));
+                                auditRecords.add(auditFromRecordMetadata(metadata, null, key, traceabilityId, correlationId, true));
                             }
                         }
                         result.complete(ProduceResult.fromRecordMetadata(metadata));
