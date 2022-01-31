@@ -92,12 +92,23 @@ public class WriteAuditLog {
 
     protected void writeAuditLog(AuditRecord auditRecord, String auditTarget, String auditTopic) {
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(auditTarget)) {
+            // The key of the audit record will be traceabilityId, original key and correlationId in sequence if the previous value is empty.
+            byte[] key = null;
+            if(auditRecord.getTraceabilityId() != null) {
+                key = auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8);
+            } else {
+                if(auditRecord.getKey() != null) {
+                    key = auditRecord.getKey().getBytes(StandardCharsets.UTF_8);
+                } else {
+                    key = auditRecord.getCorrelationId().getBytes(StandardCharsets.UTF_8);
+                }
+            }
             AuditProducerStartupHook.auditProducer.send(
                     new ProducerRecord<>(
                             auditTopic,
                             null,
                             System.currentTimeMillis(),
-                            auditRecord.getTraceabilityId() != null ? auditRecord.getTraceabilityId().getBytes(StandardCharsets.UTF_8) : auditRecord.getKey().getBytes(StandardCharsets.UTF_8),
+                            key,
                             JsonMapper.toJson(auditRecord).getBytes(StandardCharsets.UTF_8),
                             null),
                     (metadata, exception) -> {
