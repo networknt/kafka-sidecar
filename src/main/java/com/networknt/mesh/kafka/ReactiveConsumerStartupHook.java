@@ -143,37 +143,39 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                         readyForNextBatch = true;
                                     }
                                 }
-                                final CountDownLatch latch = new CountDownLatch(1);
-                                final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-                                try {
-                                    ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
-                                    request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                                    request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                                    request.getRequestHeaders().put(Headers.HOST, "localhost");
-                                    if(logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
-                                    connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
-                                    latch.await();
-                                    int statusCode = reference.get().getResponseCode();
-                                    String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-                                    if(logger.isDebugEnabled()) logger.debug("statusCode = " + statusCode + " body  = " + body);
-                                    if(statusCode >= 400) {
-                                        // something happens on the backend and the data is not consumed correctly.
-                                        logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
+                                if(connection != null && connection.isOpen()) {
+                                    final CountDownLatch latch = new CountDownLatch(1);
+                                    final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+                                    try {
+                                        ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
+                                        request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+                                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                                        request.getRequestHeaders().put(Headers.HOST, "localhost");
+                                        if(logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
+                                        connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
+                                        latch.await();
+                                        int statusCode = reference.get().getResponseCode();
+                                        String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+                                        if(logger.isDebugEnabled()) logger.debug("statusCode = " + statusCode + " body  = " + body);
+                                        if(statusCode >= 400) {
+                                            // something happens on the backend and the data is not consumed correctly.
+                                            logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
+                                            rollback(records.get(0));
+                                            readyForNextBatch = true;
+                                        } else {
+                                            // The body will contains RecordProcessedResult for dead letter queue and audit.
+                                            // Write the dead letter queue if necessary.
+                                            if(logger.isInfoEnabled()) logger.info("Got successful response from the backend API");
+                                            processResponse(body, statusCode, records.size());
+                                            // commit the batch offset here.
+                                            kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
+                                            readyForNextBatch = true;
+                                        }
+                                    } catch (Exception exception) {
+                                        logger.error("Rollback due to process response exception: ", exception);
                                         rollback(records.get(0));
                                         readyForNextBatch = true;
-                                    } else {
-                                        // The body will contains RecordProcessedResult for dead letter queue and audit.
-                                        // Write the dead letter queue if necessary.
-                                        if(logger.isInfoEnabled()) logger.info("Got successful response from the backend API");
-                                        processResponse(body, statusCode, records.size());
-                                        // commit the batch offset here.
-                                        kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
-                                        readyForNextBatch = true;
                                     }
-                                } catch (Exception exception) {
-                                    logger.error("Rollback due to process response exception: ", exception);
-                                    rollback(records.get(0));
-                                    readyForNextBatch = true;
                                 }
                             } else {
                                 // Record size is zero. Do we need an extra period of sleep?
