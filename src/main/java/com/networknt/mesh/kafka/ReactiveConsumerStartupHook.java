@@ -9,6 +9,7 @@ import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.Constants;
+import com.networknt.utility.StringUtils;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientRequest;
@@ -165,23 +166,23 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             }
                                         } catch (Exception exception) {
                                             logger.error("Rollback due to process response exception: ", exception);
+                                            // For spring boot backend, the connection created during the liveness and readiness won't work, need to close it to recreate.
+                                            if(connection != null && connection.isOpen()) {
+                                                try {
+                                                    connection.close();
+                                                } catch (Exception ei) {
+                                                    logger.error("Exception while closing HTTP Client connection", ei);
+                                                }
+                                            }
                                             rollback(records.get(0));
                                             readyForNextBatch = true;
-                                            return;
                                         }
                                     } else {
                                         // Record size is zero. Do we need an extra period of sleep?
                                         if (logger.isTraceEnabled())
                                             logger.trace("Polled nothing from the Kafka cluster or connection to backend is null");
 
-                                        if (records.size() == 0) {
-                                            logger.debug("Polled nothing from the Kafka cluster");
-                                        } else if (records.size() > 0 && (getConnection() == null || !getConnection().isOpen())) {
-                                            logger.info("Rollback due to connection to backend is not open ");
-                                            rollback(records.get(0));
-                                        }
                                         readyForNextBatch = true;
-                                        return;
                                     }
                                 }
                             }
@@ -228,7 +229,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     result.getRecord().getTopic() + config.getDeadLetterTopicExt(),
                                     null,
                                     System.currentTimeMillis(),
-                                    result.getKey().getBytes(StandardCharsets.UTF_8),
+                                    !StringUtils.isEmpty(result.getKey()) ? result.getKey().getBytes(StandardCharsets.UTF_8) : null,
                                     JsonMapper.toJson(result.getRecord().getValue()).getBytes(StandardCharsets.UTF_8),
                                     populateHeaders(result)),
                             (metadata, exception) -> {
