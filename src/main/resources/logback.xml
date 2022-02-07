@@ -29,7 +29,7 @@
         <!-- encoders are assigned the type
              ch.qos.logback.classic.encoder.PatternLayoutEncoder by default -->
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %X{sId} %X{cId} %-5level %class{36}:%L %M - %msg%n</pattern>
+            <pattern>%d{yyyy-MM-dd'T'HH:mm:ss.SSS} [%thread] %X{sId} %X{cId} %-5level %class{36}:%L %M - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -72,15 +72,15 @@
         </triggeringPolicy>
     </appender>
 
-    <!--sidecar audit log-->
-    <appender name="sidecar" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>log/sidecar-audit.json</file> <!-- logfile location -->
+    <!-- audit log-->
+    <appender name="audit" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>log/audit.json</file> <!-- logfile location -->
         <encoder>
             <pattern>%date{ISO8601} %msg%n</pattern> <!-- the layout pattern used to format log entries -->
             <immediateFlush>true</immediateFlush>
         </encoder>
         <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>log/sidecar-audit.json.%i.zip</fileNamePattern>
+            <fileNamePattern>log/audit.json.%i.zip</fileNamePattern>
             <minIndex>1</minIndex>
             <maxIndex>5</maxIndex> <!-- max number of archived logs that are kept -->
         </rollingPolicy>
@@ -90,37 +90,15 @@
         </triggeringPolicy>
     </appender>
 
-    <!--audit log-->
-    <appender name="audit" class="ch.qos.logback.core.rolling.RollingFileAppender">
-        <file>log/audit.log</file> <!-- logfile location -->
-        <encoder>
-            <pattern>%-5level [%thread] %date{ISO8601} %X{sId} %X{cId} %F:%L - %msg%n
-            </pattern> <!-- the layout pattern used to format log entries -->
-            <immediateFlush>true</immediateFlush>
-        </encoder>
-        <rollingPolicy class="ch.qos.logback.core.rolling.FixedWindowRollingPolicy">
-            <fileNamePattern>log/audit.log.%i.zip</fileNamePattern>
-            <minIndex>1</minIndex>
-            <maxIndex>5</maxIndex> <!-- max number of archived logs that are kept -->
-        </rollingPolicy>
-        <triggeringPolicy class="ch.qos.logback.core.rolling.SizeBasedTriggeringPolicy">
-            <maxFileSize>200MB
-            </maxFileSize> <!-- The size of the logfile that triggers a switch to a new logfile, and the current one archived -->
-        </triggeringPolicy>
-    </appender>
 
     <root level="error">
         <appender-ref ref="stdout"/>
         <appender-ref ref="stdout-file"/>
     </root>
 
-    <logger name="com.networknt" level="info" additivity="false">
+    <logger name="com.networknt" level="debug" additivity="false">
         <appender-ref ref="stdout"/>
         <appender-ref ref="stdout-file"/>
-    </logger>
-
-    <logger name="Sidecar" level="info" additivity="false">
-        <appender-ref ref="sidecar"/>
     </logger>
 
     <logger name="Audit" level="info" additivity="false">
