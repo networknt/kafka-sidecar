@@ -152,7 +152,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             if (statusCode >= 400) {
                                                 // something happens on the backend and the data is not consumed correctly.
                                                 logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
-                                                rollback(records.get(0));
+                                                rollback(records);
                                                 readyForNextBatch = true;
                                             } else {
                                                 // The body will contains RecordProcessedResult for dead letter queue and audit.
@@ -174,7 +174,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                                     logger.error("Exception while closing HTTP Client connection", ei);
                                                 }
                                             }
-                                            rollback(records.get(0));
+                                            rollback(records);
                                             readyForNextBatch = true;
                                         }
                                     } else {
@@ -201,15 +201,32 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         }
     }
 
-    private void rollback(ConsumerRecord firstRecord) {
-        ConsumerSeekRequest.PartitionOffset partitionOffset = new ConsumerSeekRequest.PartitionOffset(firstRecord.getTopic(), firstRecord.getPartition(), firstRecord.getOffset(), null);
-        List<ConsumerSeekRequest.PartitionOffset> offsets = new ArrayList<>();
-        offsets.add(partitionOffset);
+    private <ClientValueT, ClientKeyT> void rollback(List<ConsumerRecord<ClientKeyT,ClientValueT>> records) {
+        // as one topic multiple partitions or multiple topics records will be in the same list, we need to find out how many offsets that is need to seek.
+        Map<String, ConsumerSeekRequest.PartitionOffset> topicPartitionMap = new HashMap<>();
+        for(ConsumerRecord record: records) {
+            String topic = record.getTopic();
+            int partition = record.getPartition();
+            long offset = record.getOffset();
+            ConsumerSeekRequest.PartitionOffset partitionOffset = topicPartitionMap.get(topic + ":" + partition);
+            if(partitionOffset == null) {
+                partitionOffset = new ConsumerSeekRequest.PartitionOffset(topic, partition, offset, null);
+                topicPartitionMap.put(topic + ":" + partition, partitionOffset);
+            } else {
+                // found the record in the map, set the offset if the current offset is smaller.
+                if(partitionOffset.getOffset() > offset) {
+                    partitionOffset.setOffset(offset);
+                }
+            }
+        }
+        // convert the map values to a list.
+        List<ConsumerSeekRequest.PartitionOffset> offsets = topicPartitionMap.values().stream()
+                .collect(Collectors.toList());
+        if (logger.isDebugEnabled())
+            logger.debug("Rollback number of offsets = " + offsets.size());
         List<ConsumerSeekRequest.PartitionTimestamp> timestamps = new ArrayList<>();
         ConsumerSeekRequest consumerSeekRequest = new ConsumerSeekRequest(offsets, timestamps);
         kafkaConsumerManager.seek(groupId, instanceId, consumerSeekRequest);
-        if (logger.isDebugEnabled())
-            logger.debug("Rollback to topic " + firstRecord.getTopic() + " partition " + firstRecord.getPartition() + " offset " + firstRecord.getOffset());
     }
 
     private void processResponse(String responseBody, int statusCode, int recordSize) {
