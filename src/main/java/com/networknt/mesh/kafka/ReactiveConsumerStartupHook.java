@@ -58,19 +58,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
         groupId = (String) config.getProperties().get("group.id");
-        CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(null, null, config.getKeyFormat(), config.getValueFormat(), null, null, null, null);
-        instanceId = kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
-
-        String topic = config.getTopic();
-        ConsumerSubscriptionRecord subscription;
-        if (topic.contains(",")) {
-            // remove the whitespaces
-            topic = topic.replaceAll("\\s+", "");
-            subscription = new ConsumerSubscriptionRecord(Arrays.asList(topic.split(",", -1)), null);
-        } else {
-            subscription = new ConsumerSubscriptionRecord(Collections.singletonList(config.getTopic()), null);
-        }
-        kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
+        subscribeTopic();
         runConsumer();
         logger.info("ReactiveConsumerStartupHook ends");
     }
@@ -147,6 +135,15 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             latch.await();
                                             int statusCode = reference.get().getResponseCode();
                                             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+                                            /**
+                                             * If consumer has exited by the time backend responds back, 
+                                             * then create another subscription.
+                                             */
+                                            if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                                            null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                                            StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                                                subscribeTopic();
+                                            }
                                             if (logger.isDebugEnabled())
                                                 logger.debug("statusCode = " + statusCode + " body  = " + body);
                                             if (statusCode >= 400) {
@@ -308,5 +305,22 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
             }
         }
         return connection;
+    }
+
+
+    public void subscribeTopic(){
+        CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(null, null, config.getKeyFormat(), config.getValueFormat(), null, null, null, null);
+        instanceId = kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
+
+        String topic = config.getTopic();
+        ConsumerSubscriptionRecord subscription;
+        if (topic.contains(",")) {
+            // remove the whitespaces
+            topic = topic.replaceAll("\\s+", "");
+            subscription = new ConsumerSubscriptionRecord(Arrays.asList(topic.split(",", -1)), null);
+        } else {
+            subscription = new ConsumerSubscriptionRecord(Collections.singletonList(config.getTopic()), null);
+        }
+        kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
     }
 }
