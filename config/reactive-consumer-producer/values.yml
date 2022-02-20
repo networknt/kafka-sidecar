@@ -8,18 +8,18 @@ kafka-producer.auditTarget: topic
 kafka-producer.auditTopic: sidecar-audit
 
 # consumer format configuration
-kafka-consumer.topic: test1
+kafka-consumer.topic: original.account
 kafka-consumer.group.id:  group001
 kafka-consumer.keyFormat: string
 kafka-consumer.valueFormat: jsonschema
 kafka-consumer.auditTarget: topic
-
+kafka-consumer.backendApiHost: http://localhost:8444
 # kafka-consumer.max.poll.records: 10
 # kafka-consumer.max.partition.fetch.bytes: 1000
 # kafka-consumer.fetch.max.bytes: 1000
 # kafka-consumer.requestMaxBytes: 1000
 
-kafka-ksqldb.backendUrl: http://localhost:8444
+kafka-ksqldb.backendUrl: https://localhost:8444
 kafka-ksqldb.backendPath: /kafka/ksqldb
 kafka-ksqldb.ksqldbHost: localhost
 kafka-ksqldb.ksqldbPort: 8088
