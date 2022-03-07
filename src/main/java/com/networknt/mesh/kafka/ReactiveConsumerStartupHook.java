@@ -109,12 +109,9 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     List<ConsumerRecord<ClientKeyT, ClientValueT>> records, FrameworkException e
                             ) {
                                 if (e != null) {
-                                    if (logger.isDebugEnabled()) logger.debug("FrameworkException:", e);
-                                    // we need to set a state of failure if unexpected exception happens.
-                                    if (KafkaConsumerReadTask.UNEXPECTED_CONSUMER_READ_EXCEPTION.equals(e.getStatus().getCode())) {
-                                        // set active consumer healthy to false in order to restart the container/pod.
-                                        healthy = false;
-                                    }
+                                    logger.error("FrameworkException:", e);
+                                    // set active consumer healthy to false in order to restart the container/pod.
+                                    healthy = false;
                                 } else {
                                     // reset the healthy status to true if onCompletion returns data without exception for another try.
                                     // this will ensure that k8s probe won't restart the pod by only one exception. It will only restart
