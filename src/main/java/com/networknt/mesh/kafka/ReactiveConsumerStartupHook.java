@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.client.ClientConfig;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
@@ -28,6 +29,7 @@ import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -129,7 +131,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
                                             final CountDownLatch latch = new CountDownLatch(1);
                                             connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
-                                            latch.await();
+                                            latch.await(ClientConfig.get().getTimeout(), TimeUnit.MILLISECONDS);
                                             int statusCode = reference.get().getResponseCode();
                                             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                                             /**
