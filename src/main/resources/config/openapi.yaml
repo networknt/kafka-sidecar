@@ -702,15 +702,14 @@ components:
       type: object
       properties:
         keyFormat:
-          type: integer
-          enum: [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
-          ]
+          type: string
+          enum:
+            - BINARY
+            - JSON
+            - AVRO
+            - JSONSCHEMA
+            - PROTOBUF
+            - STRING
         keySchema:
           type: string
         keySchemaId:
@@ -720,15 +719,14 @@ components:
         keySchemaSubject:
           type: string
         valueFormat:
-          type: integer
-          enum: [
-              0,
-              1,
-              2,
-              3,
-              4,
-              5
-          ]
+          type: string
+          enum:
+            - BINARY
+            - JSON
+            - AVRO
+            - JSONSCHEMA
+            - PROTOBUF
+            - STRING
         valueSchema:
           type: string
         valueSchemaId:
@@ -753,21 +751,21 @@ components:
         keyFormat:
           type: string
           enum:
-            - binary
-            - avro
-            - json
-            - jsonschema
-            - protobuf
-            - string
+            - BINARY
+            - JSON
+            - AVRO
+            - JSONSCHEMA
+            - PROTOBUF
+            - STRING
         valueFormat:
           type: string
           enum:
-            - binary
-            - avro
-            - json
-            - jsonschema
-            - protobuf
-            - string
+            - BINARY
+            - JSON
+            - AVRO
+            - JSONSCHEMA
+            - PROTOBUF
+            - STRING
         autoOffsetReset:
           type: string
         autoCommitEnable:
