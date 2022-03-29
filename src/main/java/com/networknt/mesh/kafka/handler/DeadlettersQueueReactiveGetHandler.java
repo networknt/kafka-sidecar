@@ -54,14 +54,13 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
         if(logger.isDebugEnabled()) logger.debug("ReplayDeadLetterTopicGetHandler constructed!");
     }
 
-    
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String groupId = exchange.getQueryParameters().get("group")==null? config.getGroupId() : exchange.getQueryParameters().get("group").getFirst();
         KafkaConsumerState state = ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, REPLAY_DEFAULT_INSTANCE);
         String instanceId = REPLAY_DEFAULT_INSTANCE;
         if (state == null) {
-             CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(REPLAY_DEFAULT_INSTANCE, null, EmbeddedFormat.STRING.name(), EmbeddedFormat.STRING.name(), null, null, null, null);
+            CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(REPLAY_DEFAULT_INSTANCE, null, EmbeddedFormat.STRING.name(), EmbeddedFormat.STRING.name(), null, null, null, null);
             instanceId = ReactiveConsumerStartupHook.kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
         }
 
@@ -99,7 +98,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 return;
             }
         }
-     //   String topic = exchange.getQuer(Arrays.asListyParameters().get("topic")==null? config.getTopic() : exchange.getQueryParameters().get("topic").getFirst();
+        // String topic = exchange.getQuer(Arrays.asListyParameters().get("topic")==null? config.getTopic() : exchange.getQueryParameters().get("topic").getFirst();
         ConsumerSubscriptionRecord subscription;
         subscription = new ConsumerSubscriptionRecord(topics.stream().map(t->t + config.getDeadLetterTopicExt()).collect(Collectors.toList()), null);
         ReactiveConsumerStartupHook.kafkaConsumerManager.subscribe(groupId, instanceId, subscription);

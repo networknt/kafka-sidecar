@@ -127,11 +127,14 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
                                             request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
                                             request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                                            if(config.isBackendConnectionReset()) {
+                                                request.getRequestHeaders().put(Headers.CONNECTION, "close");
+                                            }
                                             request.getRequestHeaders().put(Headers.HOST, "localhost");
                                             if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
                                             final CountDownLatch latch = new CountDownLatch(1);
                                             connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
-                                            latch.await(ClientConfig.get().getTimeout(), TimeUnit.MILLISECONDS);
+                                            latch.await();
                                             int statusCode = reference.get().getResponseCode();
                                             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                                             /**
@@ -142,6 +145,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
                                             StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
                                                 subscribeTopic();
+                                                logger.info("Resubscribed to topic as consumer had exited .");
                                             }
                                             if (logger.isDebugEnabled())
                                                 logger.debug("statusCode = " + statusCode + " body  = " + body);
@@ -169,6 +173,16 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                                 } catch (Exception ei) {
                                                     logger.error("Exception while closing HTTP Client connection", ei);
                                                 }
+                                            }
+                                            /**
+                                             * If consumer has exited by the time backend responds back,
+                                             * then create another subscription.
+                                             */
+                                            if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                                                    null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                                                    StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                                                subscribeTopic();
+                                                logger.info("Resubscribed to topic as consumer had exited .");
                                             }
                                             rollback(records);
                                             readyForNextBatch = true;
