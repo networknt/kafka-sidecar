@@ -14,7 +14,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ProducerStartupHook implements StartupHookProvider {
     private static Logger logger = LoggerFactory.getLogger(ProducerStartupHook.class);
-    public static Map<String, Optional<RegisteredSchema>> schemaCache = new ConcurrentHashMap<>();
     public static Producer producer;
     @Override
     public void onStartup() {

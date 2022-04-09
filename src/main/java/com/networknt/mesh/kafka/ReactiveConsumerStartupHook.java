@@ -1,6 +1,8 @@
 package com.networknt.mesh.kafka;
 
-import com.networknt.client.ClientConfig;
+import com.networknt.kafka.producer.NativeLightProducer;
+import com.networknt.kafka.producer.SidecarProducer;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
@@ -8,7 +10,9 @@ import com.networknt.exception.FrameworkException;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
+import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
+import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
 import com.networknt.utility.StringUtils;
 import io.undertow.UndertowOptions;
@@ -17,7 +21,6 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,15 +30,21 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
+/**
+ * This startup hook depending on the ProducerStartupHook to produce the dead letters to the Kafka dead letter topic.
+ * So we need to make sure that the ProducerStartupHook is configured in the service.yml file. Otherwise, an error
+ * will be thrown.
+ *
+ */
 public class ReactiveConsumerStartupHook extends WriteAuditLog implements StartupHookProvider {
     private static Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
@@ -44,6 +53,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     public static Http2Client client = Http2Client.getInstance();
     public static ClientConnection connection;
     static private ExecutorService executor = newSingleThreadExecutor();
+    public List<AuditRecord> auditRecords = new ArrayList<>();
     long timeoutMs = -1;
     long maxBytes = -1;
     String instanceId;
@@ -53,10 +63,17 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     public static boolean done = false;
     // send the next batch only when the response for the previous batch is returned.
     public static boolean readyForNextBatch = false;
+    SidecarProducer lightProducer;
 
     @Override
     public void onStartup() {
         logger.info("ReactiveConsumerStartupHook begins");
+        if(ProducerStartupHook.producer != null) {
+            lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
+        } else {
+            logger.error("ProducerStartupHook is not configured in the service.yml and it is needed");
+            throw new RuntimeException("ProducerStartupHook is not loaded!");
+        }
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
         groupId = (String) config.getProperties().get("group.id");
@@ -102,7 +119,8 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         maxBytes = (maxBytes <= 0) ? Long.MAX_VALUE : maxBytes;
         Duration timeout = Duration.ofMillis(timeoutMs);
         try {
-            if (getConnection() != null && connection.isOpen()) {
+            ClientConnection connection = kafkaConsumerManager.getConnection();
+            if (connection != null && connection.isOpen()) {
                 kafkaConsumerManager.readRecords(
                         groupId, instanceId, consumerStateType, timeout, maxBytes,
                         new ConsumerReadCallback<ClientKeyT, ClientValueT>() {
@@ -136,6 +154,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
                                             latch.await();
                                             int statusCode = reference.get().getResponseCode();
+                                            boolean consumerExitStatus=false;
                                             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                                             /**
                                              * If consumer has exited by the time backend responds back, 
@@ -145,6 +164,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
                                             StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
                                                 subscribeTopic();
+                                                consumerExitStatus=true;
                                                 logger.info("Resubscribed to topic as consumer had exited .");
                                             }
                                             if (logger.isDebugEnabled())
@@ -152,16 +172,25 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             if (statusCode >= 400) {
                                                 // something happens on the backend and the data is not consumed correctly.
                                                 logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
-                                                rollback(records);
+                                                kafkaConsumerManager.rollback(records, groupId, instanceId);
                                                 readyForNextBatch = true;
                                             } else {
                                                 // The body will contains RecordProcessedResult for dead letter queue and audit.
                                                 // Write the dead letter queue if necessary.
                                                 if (logger.isInfoEnabled())
                                                     logger.info("Got successful response from the backend API");
-                                                processResponse(body, statusCode, records.size());
-                                                // commit the batch offset here.
-                                                kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
+                                                processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords);
+                                                /**
+                                                 * If it is a new consumer , we need to seek to returned offset.
+                                                 * If existing consumer instance, then commit offset.
+                                                 */
+                                                if(consumerExitStatus){
+                                                    kafkaConsumerManager.seekToParticularOffset(records, groupId, instanceId);
+                                                }
+                                                else{
+                                                    kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
+                                                }
+
                                                 readyForNextBatch = true;
                                             }
                                         } catch (Exception exception) {
@@ -184,7 +213,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                                 subscribeTopic();
                                                 logger.info("Resubscribed to topic as consumer had exited .");
                                             }
-                                            rollback(records);
+                                            kafkaConsumerManager.rollback(records, groupId, instanceId);
                                             readyForNextBatch = true;
                                         }
                                     } else {
@@ -211,116 +240,6 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         }
     }
 
-    private <ClientValueT, ClientKeyT> void rollback(List<ConsumerRecord<ClientKeyT,ClientValueT>> records) {
-        // as one topic multiple partitions or multiple topics records will be in the same list, we need to find out how many offsets that is need to seek.
-        Map<String, ConsumerSeekRequest.PartitionOffset> topicPartitionMap = new HashMap<>();
-        for(ConsumerRecord record: records) {
-            String topic = record.getTopic();
-            int partition = record.getPartition();
-            long offset = record.getOffset();
-            ConsumerSeekRequest.PartitionOffset partitionOffset = topicPartitionMap.get(topic + ":" + partition);
-            if(partitionOffset == null) {
-                partitionOffset = new ConsumerSeekRequest.PartitionOffset(topic, partition, offset, null);
-                topicPartitionMap.put(topic + ":" + partition, partitionOffset);
-            } else {
-                // found the record in the map, set the offset if the current offset is smaller.
-                if(partitionOffset.getOffset() > offset) {
-                    partitionOffset.setOffset(offset);
-                }
-            }
-        }
-        // convert the map values to a list.
-        List<ConsumerSeekRequest.PartitionOffset> offsets = topicPartitionMap.values().stream()
-                .collect(Collectors.toList());
-        if (logger.isDebugEnabled())
-            logger.debug("Rollback number of offsets = " + offsets.size());
-        List<ConsumerSeekRequest.PartitionTimestamp> timestamps = new ArrayList<>();
-        ConsumerSeekRequest consumerSeekRequest = new ConsumerSeekRequest(offsets, timestamps);
-        kafkaConsumerManager.seek(groupId, instanceId, consumerSeekRequest);
-    }
-
-    private void processResponse(String responseBody, int statusCode, int recordSize) {
-        if (responseBody != null) {
-            List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
-            if (results.size() != recordSize) {
-                // if the string2List failed, then a RuntimeException has thrown already.
-                // https://github.com/networknt/kafka-sidecar/issues/70 if the response size doesn't match the record size
-                logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
-                throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
-            }
-            for (int i = 0; i < results.size(); i++) {
-                RecordProcessedResult result = Config.getInstance().getMapper().convertValue(results.get(i), RecordProcessedResult.class);
-                if (config.isDeadLetterEnabled() && !result.isProcessed()) {
-                    ProducerStartupHook.producer.send(
-                            new ProducerRecord<>(
-                                    result.getRecord().getTopic() + config.getDeadLetterTopicExt(),
-                                    null,
-                                    System.currentTimeMillis(),
-                                    !StringUtils.isEmpty(result.getKey()) ? result.getKey().getBytes(StandardCharsets.UTF_8) : null,
-                                    JsonMapper.toJson(result.getRecord().getValue()).getBytes(StandardCharsets.UTF_8),
-                                    populateHeaders(result)),
-                            (metadata, exception) -> {
-                                if (exception != null) {
-                                    // handle the exception by logging an error;
-                                    logger.error("Exception:" + exception);
-                                } else {
-                                    if (logger.isTraceEnabled())
-                                        logger.trace("Write to dead letter topic meta " + metadata.topic() + " " + metadata.partition() + " " + metadata.offset());
-                                }
-                            });
-                }
-                if (config.isAuditEnabled())
-                    reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
-            }
-        } else {
-            // https://github.com/networknt/kafka-sidecar/issues/70 to check developers errors.
-            // throws exception if the body is empty when the response code is successful.
-            logger.error("Response body is empty with success status code is " + statusCode);
-            throw new RuntimeException("Response Body is empty with success status code " + statusCode);
-        }
-
-    }
-
-    public org.apache.kafka.common.header.Headers populateHeaders(RecordProcessedResult recordProcessedResult) {
-        org.apache.kafka.common.header.Headers headers = new RecordHeaders();
-        if (recordProcessedResult.getCorrelationId() != null) {
-            headers.add(Constants.CORRELATION_ID_STRING, recordProcessedResult.getCorrelationId().getBytes(StandardCharsets.UTF_8));
-        }
-        if (recordProcessedResult.getTraceabilityId() != null) {
-            headers.add(Constants.TRACEABILITY_ID_STRING, recordProcessedResult.getTraceabilityId().getBytes(StandardCharsets.UTF_8));
-        }
-        if (recordProcessedResult.getStacktrace() != null) {
-            headers.add(Constants.STACK_TRACE, recordProcessedResult.getStacktrace().getBytes(StandardCharsets.UTF_8));
-        }
-        Map<String, String> recordHeaders = recordProcessedResult.getRecord().getHeaders();
-        if (recordHeaders != null && recordHeaders.size() > 0) {
-            recordHeaders.keySet().stream().forEach(h -> {
-                if (recordHeaders.get(h) != null) {
-                    headers.add(h, recordHeaders.get(h).getBytes(StandardCharsets.UTF_8));
-                }
-            });
-        }
-
-        return headers;
-    }
-
-    public ClientConnection getConnection() {
-
-        if (connection == null || !connection.isOpen()) {
-            try {
-                if (config.getBackendApiHost().startsWith("https")) {
-                    connection = client.borrowConnection(new URI(config.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-                } else {
-                    connection = client.borrowConnection(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-                }
-            } catch (Exception ex) {
-                throw new RuntimeException();
-            }
-        }
-        return connection;
-    }
-
-
     public void subscribeTopic(){
         CreateConsumerInstanceRequest request = new CreateConsumerInstanceRequest(null, null, config.getKeyFormat(), config.getValueFormat(), null, null, null, null);
         instanceId = kafkaConsumerManager.createConsumer(groupId, request.toConsumerInstanceConfig());
@@ -336,4 +255,5 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         }
         kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
     }
+
 }

@@ -1,23 +1,22 @@
 package com.networknt.mesh.kafka;
 
-import com.google.protobuf.ByteString;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;
-import com.networknt.kafka.entity.AuditRecord;
-import com.networknt.kafka.entity.RecordProcessedResult;
+import com.networknt.kafka.entity.*;
+import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
 import com.networknt.utility.Constants;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
+import java.util.concurrent.CompletableFuture;
+
+import static com.networknt.handler.LightHttpHandler.logger;
 
 public class WriteAuditLog {
     private static final Logger logger = LoggerFactory.getLogger(WriteAuditLog.class);
@@ -58,34 +57,6 @@ public class WriteAuditLog {
         return auditRecord;
     }
 
-    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Optional<ByteString> key, Optional<String> traceabilityId, Optional<String> correlationId, boolean produced) {
-        AuditRecord auditRecord = new AuditRecord();
-        auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
-        if(rmd != null) {
-            auditRecord.setTopic(rmd.topic());
-            auditRecord.setPartition(rmd.partition());
-            auditRecord.setOffset(rmd.offset());
-        } else {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            e.printStackTrace(pw);
-            auditRecord.setStacktrace(sw.toString());
-        }
-        if(correlationId.isPresent()) {
-            auditRecord.setCorrelationId((correlationId.get()));
-        }
-        if(traceabilityId.isPresent()) {
-            auditRecord.setTraceabilityId(traceabilityId.get());
-        }
-
-        auditRecord.setAuditStatus(produced ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        auditRecord.setTimestamp(System.currentTimeMillis());
-        if(key.isPresent()) auditRecord.setKey(key.get().toString(StandardCharsets.UTF_8));
-        return auditRecord;
-    }
-
     protected void writeAuditLog(AuditRecord auditRecord, String auditTarget, String auditTopic) {
         if(KafkaConsumerConfig.AUDIT_TARGET_TOPIC.equals(auditTarget)) {
             // since both the traceabilityId and original message key can be empty, we are using the correlationId as the key
@@ -110,4 +81,74 @@ public class WriteAuditLog {
             SidecarAuditHelper.logResult(auditRecord);
         }
     }
+
+    public void processResponse(SidecarProducer lightProducer, KafkaConsumerConfig config, String responseBody, int statusCode, int recordSize, List<AuditRecord> auditRecords) {
+        if(responseBody != null) {
+            long start = System.currentTimeMillis();
+            List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
+            if (results.size() != recordSize) {
+                // if the string2List failed, then a RuntimeException has thrown already.
+                // https://github.com/networknt/kafka-sidecar/issues/70 if the response size doesn't match the record size
+                logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
+                throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
+            }
+            for (int i = 0; i < results.size(); i++) {
+                ObjectMapper objectMapper = Config.getInstance().getMapper();
+                RecordProcessedResult result = objectMapper.convertValue(results.get(i), RecordProcessedResult.class);
+                if (config.isDeadLetterEnabled() && !result.isProcessed()) {
+                    try {
+                        logger.info("Sending correlation id ::: "+ result.getCorrelationId() + " traceabilityId ::: "+ result.getTraceabilityId() + " to DLQ topic ::: "+ result.getRecord().getTopic() + config.getDeadLetterTopicExt());
+                        ProduceRequest produceRequest = ProduceRequest.create(null, null, null, null,
+                                null, null,null, null,null, null, null );
+                        ProduceRecord produceRecord = ProduceRecord.create(null,null, null, null, null);
+                        produceRecord.setKey(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getKey()))));
+                        produceRecord.setValue(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getValue()))));
+                        produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
+                        produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
+                        produceRequest.setRecords(Arrays.asList(produceRecord));
+                        // populate the keyFormat and valueFormat from kafka-producer.yml if request doesn't have them.
+                        if(config.getKeyFormat() != null) {
+                            produceRequest.setKeyFormat(Optional.of(EmbeddedFormat.valueOf(config.getKeyFormat().toUpperCase())));
+                        }
+                        if(config.getValueFormat() != null) {
+                            produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
+                        }
+                        org.apache.kafka.common.header.Headers headers = ReactiveConsumerStartupHook.kafkaConsumerManager.populateHeaders(result);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic() + config.getDeadLetterTopicExt(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+                        responseFuture.whenCompleteAsync((response, throwable) -> {
+                            // write the audit log here.
+                            long startAudit = System.currentTimeMillis();
+                            synchronized (auditRecords) {
+                                if (auditRecords != null && auditRecords.size() > 0) {
+                                    auditRecords.forEach(ar -> {
+                                        writeAuditLog(ar, config.getAuditTarget(), config.getAuditTopic());
+                                    });
+                                    // clean up the audit entries
+                                    auditRecords.clear();
+                                }
+                            }
+                            if(logger.isDebugEnabled()) {
+                                logger.debug("Writing audit log takes " + (System.currentTimeMillis() - startAudit));
+                            }
+                        });
+
+                    }
+                    catch(Exception e){
+                        logger.error("Could not process record for traceability id ::: "+ result.getTraceabilityId() + ", correlation id ::: "+ result.getCorrelationId() + " to produce record for DLQ, will skip and proceed for next record ", e);
+                    }
+                }
+                if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
+            }
+            if(logger.isDebugEnabled()) {
+                logger.debug("Response processing total time is " + (System.currentTimeMillis() - start));
+            }
+        } else {
+            // https://github.com/networknt/kafka-sidecar/issues/70 to check developers errors.
+            // throws exception if the body is empty when the response code is successful.
+            logger.error("Response body is empty with success status code is " + statusCode);
+            throw new RuntimeException("Response Body is empty with success status code " + statusCode);
+        }
+
+    }
+
 }
