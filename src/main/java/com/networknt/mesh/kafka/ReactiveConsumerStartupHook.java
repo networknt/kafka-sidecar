@@ -1,8 +1,9 @@
 package com.networknt.mesh.kafka;
 
-import com.networknt.mesh.kafka.handler.ProducersTopicPostHandler;
+import com.networknt.exception.ApiException;
+import com.networknt.kafka.producer.NativeLightProducer;
+import com.networknt.kafka.producer.SidecarProducer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.networknt.client.ClientConfig;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
@@ -10,7 +11,10 @@ import com.networknt.exception.FrameworkException;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
+import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
+import com.networknt.service.SingletonServiceFactory;
+import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.StringUtils;
 import io.undertow.UndertowOptions;
@@ -19,7 +23,6 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,13 +35,18 @@ import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.concurrent.Executors.newSingleThreadExecutor;
 
+/**
+ * This startup hook depending on the ProducerStartupHook to produce the dead letters to the Kafka dead letter topic.
+ * So we need to make sure that the ProducerStartupHook is configured in the service.yml file. Otherwise, an error
+ * will be thrown.
+ *
+ */
 public class ReactiveConsumerStartupHook extends WriteAuditLog implements StartupHookProvider {
     private static Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
@@ -47,7 +55,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     public static Http2Client client = Http2Client.getInstance();
     public static ClientConnection connection;
     static private ExecutorService executor = newSingleThreadExecutor();
-    private ProducersTopicPostHandler producersTopicPostHandler= new ProducersTopicPostHandler();
+    public List<AuditRecord> auditRecords = new ArrayList<>();
     long timeoutMs = -1;
     long maxBytes = -1;
     String instanceId;
@@ -57,10 +65,17 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     public static boolean done = false;
     // send the next batch only when the response for the previous batch is returned.
     public static boolean readyForNextBatch = false;
+    SidecarProducer lightProducer;
 
     @Override
     public void onStartup() {
         logger.info("ReactiveConsumerStartupHook begins");
+        if(ProducerStartupHook.producer != null) {
+            lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
+        } else {
+            logger.error("ProducerStartupHook is not configured in the service.yml and it is needed");
+            throw new RuntimeException("ProducerStartupHook is not loaded!");
+        }
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
         groupId = (String) config.getProperties().get("group.id");
@@ -303,17 +318,17 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
                         org.apache.kafka.common.header.Headers headers = populateHeaders(result);
-                        CompletableFuture<ProduceResponse> responseFuture = producersTopicPostHandler.produceWithSchema(result.getRecord().getTopic()+ config.getDeadLetterTopicExt(), Optional.empty(), produceRequest, headers);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic()+ config.getDeadLetterTopicExt(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
                             long startAudit = System.currentTimeMillis();
-                            synchronized (producersTopicPostHandler.auditRecords) {
-                                if (producersTopicPostHandler.auditRecords != null && producersTopicPostHandler.auditRecords.size() > 0) {
-                                    producersTopicPostHandler.auditRecords.forEach(ar -> {
+                            synchronized (auditRecords) {
+                                if (auditRecords != null && auditRecords.size() > 0) {
+                                    auditRecords.forEach(ar -> {
                                         writeAuditLog(ar, config.getAuditTarget(), config.getAuditTopic());
                                     });
                                     // clean up the audit entries
-                                    producersTopicPostHandler.auditRecords.clear();
+                                    auditRecords.clear();
                                 }
                             }
                             if(logger.isDebugEnabled()) {

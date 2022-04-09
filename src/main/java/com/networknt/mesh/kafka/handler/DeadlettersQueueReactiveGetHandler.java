@@ -1,5 +1,8 @@
 package com.networknt.mesh.kafka.handler;
 
+import com.networknt.kafka.producer.NativeLightProducer;
+import com.networknt.kafka.producer.SidecarProducer;
+import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.mesh.kafka.WriteAuditLog;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,6 +18,8 @@ import com.networknt.kafka.entity.*;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
+import com.networknt.server.Server;
+import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.utility.ObjectUtils;
@@ -57,10 +62,17 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     private  boolean lastRetry = false;
     String instanceId;
     String groupId;
-    private ProducersTopicPostHandler producersTopicPostHandler= new ProducersTopicPostHandler();
     private AtomicReference<Result<List<ConsumerRecord<Object, Object>>>> result = new AtomicReference<>();
+    public List<AuditRecord> auditRecords = new ArrayList<>();
+    SidecarProducer lightProducer;
 
     public DeadlettersQueueReactiveGetHandler() {
+        if(ProducerStartupHook.producer != null) {
+            lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
+        } else {
+            logger.error("ProducerStartupHook is not configured in the service.yml and it is needed");
+            throw new RuntimeException("ProducerStartupHook is not loaded!");
+        }
         if(logger.isDebugEnabled()) logger.debug("DeadlettersQueueReactiveGetHandler constructed!");
     }
 
@@ -339,17 +351,17 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
                         org.apache.kafka.common.header.Headers headers = populateHeaders(result);
-                        CompletableFuture<ProduceResponse> responseFuture = producersTopicPostHandler.produceWithSchema(result.getRecord().getTopic(), Optional.empty(), produceRequest, headers);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
                             long startAudit = System.currentTimeMillis();
-                            synchronized (producersTopicPostHandler.auditRecords) {
-                                if (producersTopicPostHandler.auditRecords != null && producersTopicPostHandler.auditRecords.size() > 0) {
-                                    producersTopicPostHandler.auditRecords.forEach(ar -> {
+                            synchronized (auditRecords) {
+                                if (auditRecords != null && auditRecords.size() > 0) {
+                                    auditRecords.forEach(ar -> {
                                         writeAuditLog(ar, config.getAuditTarget(), config.getAuditTopic());
                                     });
                                     // clean up the audit entries
-                                    producersTopicPostHandler.auditRecords.clear();
+                                    auditRecords.clear();
                                 }
                             }
                             if(logger.isDebugEnabled()) {

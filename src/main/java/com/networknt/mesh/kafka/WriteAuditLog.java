@@ -1,6 +1,5 @@
 package com.networknt.mesh.kafka;
 
-import com.google.protobuf.ByteString;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
@@ -8,15 +7,11 @@ import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.server.Server;
 import com.networknt.utility.Constants;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.clients.producer.RecordMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 public class WriteAuditLog {
@@ -55,34 +50,6 @@ public class WriteAuditLog {
         auditRecord.setKey(result.getKey());
         auditRecord.setTimestamp(result.getTimestamp());
         auditRecord.setAuditStatus(result.isProcessed() ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        return auditRecord;
-    }
-
-    protected AuditRecord auditFromRecordMetadata(RecordMetadata rmd, Exception e, Optional<ByteString> key, Optional<String> traceabilityId, Optional<String> correlationId, boolean produced) {
-        AuditRecord auditRecord = new AuditRecord();
-        auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
-        auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
-        if(rmd != null) {
-            auditRecord.setTopic(rmd.topic());
-            auditRecord.setPartition(rmd.partition());
-            auditRecord.setOffset(rmd.offset());
-        } else {
-            StringWriter sw = new StringWriter();
-            PrintWriter pw = new PrintWriter(sw);
-            e.printStackTrace(pw);
-            auditRecord.setStacktrace(sw.toString());
-        }
-        if(correlationId.isPresent()) {
-            auditRecord.setCorrelationId((correlationId.get()));
-        }
-        if(traceabilityId.isPresent()) {
-            auditRecord.setTraceabilityId(traceabilityId.get());
-        }
-
-        auditRecord.setAuditStatus(produced ? AuditRecord.AuditStatus.SUCCESS : AuditRecord.AuditStatus.FAILURE);
-        auditRecord.setTimestamp(System.currentTimeMillis());
-        if(key.isPresent()) auditRecord.setKey(key.get().toString(StandardCharsets.UTF_8));
         return auditRecord;
     }
 
