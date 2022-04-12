@@ -68,11 +68,13 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     @Override
     public void onStartup() {
         logger.info("ReactiveConsumerStartupHook begins");
-        if(ProducerStartupHook.producer != null) {
-            lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
-        } else {
-            logger.error("ProducerStartupHook is not configured in the service.yml and it is needed");
-            throw new RuntimeException("ProducerStartupHook is not loaded!");
+        if(config.isDeadLetterEnabled()) {
+            if (ProducerStartupHook.producer != null) {
+                lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
+            } else {
+                logger.error("ProducerStartupHook is not configured and it is needed if DLQ is enabled");
+                throw new RuntimeException("ProducerStartupHook is not loaded!");
+            }
         }
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = new KafkaConsumerManager(config);
