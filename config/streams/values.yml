@@ -1,0 +1,42 @@
+# producer format configuration
+kafka-producer.bootstrap.servers: broker:29092
+kafka-producer.schema.registry.url: http://schema-registry:8081
+kafka-producer.keyFormat: string
+kafka-producer.valueFormat: string
+
+# consumer format configuration
+kafka-consumer.bootstrap.servers: broker:9092
+kafka-consumer.schema.registry.url: http://schema-registry:8081
+kafka-consumer.backendApiHost: https://localhost:8444
+kafka-consumer.topic: test6
+kafka-consumer.keyFormat: string
+kafka-consumer.valueFormat: string
+
+# streams configuration
+kafka-streams.application.id: word-count-docker
+kafka-streams.bootstrap.servers: broker:29092
+kafka-streams.schema.registry.url: http://schema-registry:8081
+
+# ksqldb configuration
+kafka-ksqldb.backendUrl: https://localhost:8444
+kafka-ksqldb.backendPath: /kafka/ksqldb
+kafka-ksqldb.ksqldbHost: ksqldb-server
+kafka-ksqldb.ksqldbPort: 8088
+
+# Service Startup and Shutdown Hooks
+service.com.networknt.server.StartupHookProvider:
+  # - com.networknt.mesh.kafka.ProducerStartupHook
+  - com.networknt.kafka.WordCountStartupHook
+  # - com.networknt.mesh.kafka.ActiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.KsqldbReactiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.KsqldbActiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.ReactiveConsumerStartupHook
+  # - com.networknt.mesh.kafka.AdminClientStartupHook
+service.com.networknt.server.ShutdownHookProvider:
+  # - com.networknt.mesh.kafka.ProducerShutdownHook
+  - com.networknt.kafka.WordCountShutdownHook
+  # - com.networknt.mesh.kafka.ActiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.KsqldbReactiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.KsqldbActiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.ReactiveConsumerShutdownHook
+  # - com.networknt.mesh.kafka.AdminClientShutdownHook

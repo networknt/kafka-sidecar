@@ -1,0 +1,19 @@
+---
+version: '2'
+services:
+  kafka-sidecar:
+    image: networknt/kafka-sidecar:2.1.0
+    volumes:
+      - ./config/streams:/config
+      - ./streamsjar:/streamsjar
+    ports:
+      - 8443:8443
+    hostname: kafka-sidecar
+    container_name: kafka-sidecar
+    networks:
+      - localnet
+
+networks:
+  localnet:
+    # driver: bridge
+    external: true
