@@ -123,6 +123,15 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         try {
             ClientConnection connection = kafkaConsumerManager.getConnection();
             if (connection != null && connection.isOpen()) {
+                /**
+                 * Scenario to handle when consumer goes away but container does not die.
+                 */
+                if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                        null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                        StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                    healthy = false;
+                    logger.error("Consumer instance not found, marking health as false for group id: " , groupId);
+                }
                 kafkaConsumerManager.readRecords(
                         groupId, instanceId, consumerStateType, timeout, maxBytes,
                         new ConsumerReadCallback<ClientKeyT, ClientValueT>() {
@@ -131,7 +140,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     List<ConsumerRecord<ClientKeyT, ClientValueT>> records, FrameworkException e
                             ) {
                                 if (e != null) {
-                                    logger.error("FrameworkException:", e);
+                                    logger.error("FrameworkException: ", e);
                                     // set active consumer healthy to false in order to restart the container/pod.
                                     healthy = false;
                                 } else {
