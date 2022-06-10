@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.client.ClientConfig;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +15,7 @@ import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
+import com.networknt.utility.ObjectUtils;
 import com.networknt.utility.StringUtils;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
@@ -30,9 +32,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -163,20 +163,27 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
                                             final CountDownLatch latch = new CountDownLatch(1);
                                             connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
-                                            latch.await();
-                                            int statusCode = reference.get().getResponseCode();
-                                            boolean consumerExitStatus=false;
+                                            latch.await(config.getInstanceTimeoutMs(), TimeUnit.MILLISECONDS);
+                                            int statusCode=0;
+                                            if(!ObjectUtils.isEmpty(reference) && !ObjectUtils.isEmpty(reference.get())){
+                                                statusCode = reference.get().getResponseCode();
+                                            }
+                                            else{
+                                                throw new TimeoutException("Rest Call to backend latch timeout");
+                                            }
                                             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                                             /**
                                              * If consumer has exited by the time backend responds back, 
                                              * then create another subscription.
+                                             * Although below piece of code looks redundant, leaving it here for a unfortunate racing situation between REST thread and consumer thread.
                                              */
                                             if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
                                             null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
                                             StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                                                subscribeTopic();
-                                                consumerExitStatus=true;
-                                                logger.info("Resubscribed to topic as consumer had exited .");
+                                                logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
+                                                healthy=false;
+                                                readyForNextBatch = false;
+                                                return;
                                             }
                                             if (logger.isDebugEnabled())
                                                 logger.debug("statusCode = " + statusCode + " body  = " + body);
@@ -192,40 +199,41 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                                     logger.info("Got successful response from the backend API");
                                                 processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords);
                                                 /**
-                                                 * If it is a new consumer , we need to seek to returned offset.
-                                                 * If existing consumer instance, then commit offset.
+                                                 * Always seek to the offset of last record in the processed batch for each topic and each partition
                                                  */
-                                                if(consumerExitStatus){
-                                                    kafkaConsumerManager.seekToParticularOffset(records, groupId, instanceId);
-                                                }
-                                                else{
-                                                    kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
-                                                }
+
+                                                List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= topicPartitionOffsetMetadataUtility(records);
+                                                ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
+                                                kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
+                                                    if(null !=e1){
+                                                        logger.error("Error committing offset, will force a restart ", e1);
+                                                        throw new RuntimeException(e1.getMessage());
+                                                    }
+                                                    else{
+                                                        topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
+                                                            logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
+                                                                    " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
+                                                        }));
+                                                    }
+                                                });
 
                                                 readyForNextBatch = true;
                                             }
                                         } catch (Exception exception) {
-                                            logger.error("Rollback due to process response exception: ", exception);
+                                            logger.error("Process response exception: ", exception);
                                             // For spring boot backend, the connection created during the liveness and readiness won't work, need to close it to recreate.
                                             if(connection != null && connection.isOpen()) {
                                                 try {
                                                     connection.close();
                                                 } catch (Exception ei) {
                                                     logger.error("Exception while closing HTTP Client connection", ei);
+                                                    healthy=false;
                                                 }
                                             }
-                                            /**
-                                             * If consumer has exited by the time backend responds back,
-                                             * then create another subscription.
-                                             */
-                                            if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
-                                                    null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
-                                                    StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                                                subscribeTopic();
-                                                logger.info("Resubscribed to topic as consumer had exited .");
-                                            }
-                                            kafkaConsumerManager.rollback(records, groupId, instanceId);
-                                            readyForNextBatch = true;
+                                            logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
+                                            healthy=false;
+                                            readyForNextBatch = false;
+                                            return;
                                         }
                                     } else {
                                         // Record size is zero. Do we need an extra period of sleep?
@@ -265,6 +273,31 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
             subscription = new ConsumerSubscriptionRecord(Collections.singletonList(config.getTopic()), null);
         }
         kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
+    }
+
+    private <ClientKeyT, ClientValueT> List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataUtility(List<ConsumerRecord<ClientKeyT, ClientValueT>> records){
+    // as one topic multiple partitions or multiple topics records will be in the same list, we need to find out how many offsets that we need to commit.
+        Map<String, TopicPartitionOffsetMetadata> topicPartitionMap = new HashMap<>();
+        for(ConsumerRecord record: records) {
+            String topic = record.getTopic();
+            int partition = record.getPartition();
+            long offset = record.getOffset();
+            TopicPartitionOffsetMetadata partitionOffset = topicPartitionMap.get(topic + ":" + partition);
+            if(partitionOffset == null) {
+                partitionOffset = new TopicPartitionOffsetMetadata(topic, partition, offset, null);
+                topicPartitionMap.put(topic + ":" + partition, partitionOffset);
+            } else {
+                // found the record in the map, set the offset if the current offset is smaller.
+                if(partitionOffset.getOffset() < offset) {
+                    partitionOffset = new TopicPartitionOffsetMetadata(topic, partition, offset, null);
+                    topicPartitionMap.put(topic + ":" + partition, partitionOffset);
+                }
+            }
+        }
+        // convert the map values to a list.
+        List<TopicPartitionOffsetMetadata> offsets = topicPartitionMap.values().stream()
+                .collect(Collectors.toList());
+        return offsets;
     }
 
 }
