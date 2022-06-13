@@ -1,4 +1,5 @@
 # server configuration
+server.serviceId: com.networknt.kafka-sidecar-1.0.0
 server.httpPort: 9443
 
 # producer format configuration
