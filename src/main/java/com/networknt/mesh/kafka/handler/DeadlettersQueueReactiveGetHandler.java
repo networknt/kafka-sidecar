@@ -5,7 +5,6 @@ import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.mesh.kafka.WriteAuditLog;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
@@ -18,12 +17,11 @@ import com.networknt.kafka.entity.*;
 import com.networknt.monad.Failure;
 import com.networknt.monad.Result;
 import com.networknt.monad.Success;
-import com.networknt.server.Server;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
+import com.networknt.utility.NetUtils;
 import com.networknt.utility.ObjectUtils;
 import com.networknt.utility.StringUtils;
-import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
@@ -32,12 +30,9 @@ import io.undertow.util.Headers;
 import io.undertow.util.Methods;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.xnio.OptionMap;
 
-import java.net.URI;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -53,7 +48,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     long maxBytes = -1;
     private static String UNEXPECTED_CONSUMER_READ_EXCEPTION = "ERR12205";
     private static String INVALID_TOPIC_NAME = "ERR30001";
-    private static String REPLAY_DEFAULT_INSTANCE = "Reactive-Replay-1289990";
+    private static String REPLAY_DEFAULT_INSTANCE = "Reactive-Replay-"+ getIP();
     private  boolean lastRetry = false;
     String instanceId;
     String groupId;
@@ -176,7 +171,6 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 ReactiveConsumerStartupHook.kafkaConsumerManager.getConnection().sendRequest(request, Http2Client.getInstance().createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(SidecarConsumerRecord::fromConsumerRecord).collect(Collectors.toList()))));
                 latch.await();
                 int statusCode = reference.get().getResponseCode();
-                boolean consumerExitStatus=false;
                 String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                 /**
                  * If consumer has exited by the time backend responds back,
@@ -186,7 +180,6 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                         null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
                         StringUtils.isEmpty(ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
                     subscribeTopic(topics);
-                    consumerExitStatus=true;
                     logger.info("Resubscribed to topic as consumer had exited .");
                 }
                 if (logger.isDebugEnabled())
@@ -201,17 +194,29 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                     // Write the dead letter queue if necessary.
                     if (logger.isInfoEnabled())
                         logger.info("Got successful response from the backend API");
-                    processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords);
+                    processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords, lastRetry);
                     /**
                      * If it is a new consumer , we need to seek to returned offset.
                      * If existing consumer instance, then commit offset.
+                     *
+                     *
+                     * REVISED: Always seek to the offset of last record in the processed batch for each topic and each partition
                      */
-                    if(consumerExitStatus){
-                        ReactiveConsumerStartupHook.kafkaConsumerManager.seekToParticularOffset(records, groupId, instanceId);
-                    }
-                    else{
-                        ReactiveConsumerStartupHook.kafkaConsumerManager.commitCurrentOffsets(groupId, instanceId);
-                    }
+
+                    List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= ReactiveConsumerStartupHook.topicPartitionOffsetMetadataUtility(records);
+                    ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
+                    ReactiveConsumerStartupHook.kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
+                        if(null !=e1){
+                            logger.error("Error committing offset, will force a restart ", e1);
+                            throw new RuntimeException(e1.getMessage());
+                        }
+                        else{
+                            topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
+                                logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
+                                        " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
+                            }));
+                        }
+                    });
                     if (logger.isDebugEnabled())
                         logger.debug("total dlq records processed:" + records.size());
                     ReactiveConsumerStartupHook.kafkaConsumerManager.successExchangeDefinition(exchange, groupId, instanceId, topics, records);
@@ -302,6 +307,10 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
         subscription = new ConsumerSubscriptionRecord(topics, null);
         ReactiveConsumerStartupHook.kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
         return subscription;
+    }
+
+    private static String getIP(){
+        return !StringUtils.isEmpty(System.getenv("STATUS_HOST_IP"))? System.getenv("STATUS_HOST_IP") : NetUtils.getLocalAddressByDatagram();
     }
 
 }
