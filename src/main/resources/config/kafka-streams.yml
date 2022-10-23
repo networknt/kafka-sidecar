@@ -29,6 +29,17 @@ properties:
   # basic authentication user:pass for the schema registry
   basic.auth.user.info: ${kafka-streams.username:username}:${KAFKA_STREAMS_PASSWORD:password}
   basic.auth.credentials.source: ${kafka-streams.basic.auth.credentials.source:USER_INFO}
+  state.dir: ${kafka-streams.state.dir:/tmp}
 
 # Only set to true right after the streams reset and start the server. Once the server is up, shutdown and change this to false and restart.
 cleanUp: ${kafka-streams.cleanUp:false}
+# Indicator if the audit is enabled.
+auditEnabled: ${kafka-streams.auditEnabled:true}
+# Audit log destination topic or logfile. Default to logfile
+auditTarget: ${kafka-streams.auditTarget:topic}
+# The consumer audit topic name if the auditTarget is topic
+auditTopic: ${kafka-streams.auditTopic:sidecar-audit}
+# Indicator if the dead letter topic is enabled.
+deadLetterEnabled: ${kafka-streams.deadLetterEnabled:true}
+# The extension of the dead letter queue(topic) that is added to the original topic to form the dead letter topic
+deadLetterTopicExt: ${kafka-streams.deadLetterTopicExt:.dlq}

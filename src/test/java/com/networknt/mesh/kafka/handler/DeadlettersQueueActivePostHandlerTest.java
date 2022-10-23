@@ -8,6 +8,7 @@ import com.networknt.kafka.entity.ConsumerRecord;
 import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
+import com.networknt.openapi.SchemaValidator;
 import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.status.Status;
 import io.undertow.UndertowOptions;
@@ -90,8 +91,8 @@ public class DeadlettersQueueActivePostHandlerTest {
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         Optional<HeaderValues> contentTypeName = Optional.ofNullable(reference.get().getResponseHeaders().get(Headers.CONTENT_TYPE));
-        SchemaValidatorsConfig config = new SchemaValidatorsConfig();
-        ResponseValidator responseValidator = new ResponseValidator(config);
+        SchemaValidator schemaValidator = new SchemaValidator();
+        ResponseValidator responseValidator = new ResponseValidator(schemaValidator);
         int statusCode = reference.get().getResponseCode();
         Status status;
         if(contentTypeName.isPresent()) {

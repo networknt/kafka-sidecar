@@ -197,7 +197,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                                 // Write the dead letter queue if necessary.
                                                 if (logger.isInfoEnabled())
                                                     logger.info("Got successful response from the backend API");
-                                                processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords);
+                                                processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords, false);
                                                 /**
                                                  * Always seek to the offset of last record in the processed batch for each topic and each partition
                                                  */
@@ -275,7 +275,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         kafkaConsumerManager.subscribe(groupId, instanceId, subscription);
     }
 
-    private <ClientKeyT, ClientValueT> List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataUtility(List<ConsumerRecord<ClientKeyT, ClientValueT>> records){
+    public static <ClientKeyT, ClientValueT> List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataUtility(List<ConsumerRecord<ClientKeyT, ClientValueT>> records){
     // as one topic multiple partitions or multiple topics records will be in the same list, we need to find out how many offsets that we need to commit.
         Map<String, TopicPartitionOffsetMetadata> topicPartitionMap = new HashMap<>();
         for(ConsumerRecord record: records) {
