@@ -1,21 +1,14 @@
-#--------------------------------------------------------------------------------
 # values.yml : Set of values commonly overridden in microservices
-#--------------------------------------------------------------------------------
 
-#--------------------------------------------------------------------------------
 # client.yml
-#--------------------------------------------------------------------------------
+client.verifyHostname: false
 
-#--------------------------------------------------------------------------------
 # server.yml
 server.serviceId: com.networknt.kafka-sidecar-1.0.0
-#--------------------------------------------------------------------------------
 
-#--------------------------------------------------------------------------------
 # security.yml
-#--------------------------------------------------------------------------------
 # Enable JWT verification flag.
-# security.enableVerifyJwt: true
+openapi-security.enableVerifyJwt: true
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
