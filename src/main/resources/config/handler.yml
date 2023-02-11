@@ -60,8 +60,21 @@ handlers:
   - com.networknt.info.ServerInfoGetHandler@info
   - com.networknt.logging.handler.LoggerGetHandler@getLogger
   - com.networknt.logging.handler.LoggerPostHandler@postLogger
+  - com.networknt.logging.handler.LoggerGetLogContentsHandler@getLogContents
   - com.networknt.specification.SpecDisplayHandler@spec
   - com.networknt.specification.SpecSwaggerUIHandler@swaggerui
+  - com.networknt.specification.FaviconHandler@favicon
+  - com.networknt.config.reload.handler.ModuleRegistryGetHandler@modules
+  - com.networknt.config.reload.handler.ConfigReloadHandler@configReload
+  - com.networknt.server.handler.ServerShutdownHandler@shutdown
+  # Chaos monkey handlers
+  - com.networknt.chaos.KillappAssaultHandler@killapp
+  - com.networknt.chaos.LatencyAssaultHandler@latency
+  - com.networknt.chaos.MemoryAssaultHandler@memory
+  - com.networknt.chaos.ExceptionAssaultHandler@exchaos
+  - com.networknt.chaos.ChaosMonkeyGetHandler@chaosget
+  - com.networknt.chaos.ChaosMonkeyPostHandler@chaospost
+
   # - com.networknt.metrics.prometheus.PrometheusGetHandler@getprometheus
   # Business Handlers
   - com.networknt.mesh.kafka.handler.ProducersTopicPostHandler
@@ -96,6 +109,13 @@ chains:
     - audit
     # - dump
     - sanitizer
+    - validator
+  admin:
+    - exception
+    - correlation
+    - specification
+    - security
+    - body
     - validator
 
 paths:
@@ -212,27 +232,58 @@ paths:
     method: 'GET'
     exec:
       - health
-
-  - path: '/server/info'
+  # the health check endpoint called from control plane with security and it will invoke backend optionally.
+  - path: '/adm/health/${server.serviceId}'
     method: 'get'
     exec:
-      - security
+      - admin
+      - health
+  - path: '/adm/server/info'
+    method: 'get'
+    exec:
+      - admin
       - info
-
-  - path: '/logger'
+  - path: '/adm/logger'
     method: 'get'
     exec:
-      - security
+      - admin
       - getLogger
-
-  - path: '/logger'
+  - path: '/adm/logger'
     method: 'post'
     exec:
-      - security
-      - body
+      - admin
       - postLogger
-
-
+  - path: '/adm/logger/content'
+    method: 'GET'
+    exec:
+      - admin
+      - getLogContents
+  - path: '/adm/modules'
+    method: 'get'
+    exec:
+      - modules
+  - path: '/adm/modules'
+    method: 'post'
+    exec:
+      - body
+      - configReload
+  - path: '/adm/shutdown'
+    method: 'delete'
+    exec:
+      - admin
+      - shutdown
+  - path: '/adm/chaosmonkey'
+    method: 'get'
+    exec:
+      # enable security once we have this endpoint in the spec with a proper scope.
+      - admin
+      - chaosget
+  - path: '/adm/chaosmonkey/{assault}'
+    method: 'post'
+    exec:
+      # enable security once we have this endpoint in the spec with a proper scope.
+      - admin
+      - chaospost
   - path: '/spec.yaml'
     method: 'get'
     exec:
@@ -241,3 +292,7 @@ paths:
     method: 'get'
     exec:
       - swaggerui
+  - path: '/favicon.ico'
+    method: 'get'
+    exec:
+      - favicon
