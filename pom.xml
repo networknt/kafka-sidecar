@@ -6,7 +6,7 @@
     <groupId>com.networknt</groupId>
     <artifactId>kafka-sidecar</artifactId>
     <packaging>jar</packaging>
-    <version>2.1.13</version>
+    <version>2.1.14</version>
     <name>kafka-sidecar</name>
     <description>Kafka Sidecar</description>
     <url>https://github.com/networknt/kafka-sidecar</url>
