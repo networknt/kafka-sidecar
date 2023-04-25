@@ -2,6 +2,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
+import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.exception.ClientException;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
@@ -49,20 +50,18 @@ public class ConsumersGroupInstancesInstanceOffsetsPutHandlerTest {
 
         final Http2Client client = Http2Client.getInstance();
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection;
-        try {
-            if(enableHttps) {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY).get();
-            } else {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-            }
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/consumers/lELerxBdeFWQVhSAm/instances/lELerxBdeFWQVhSAm/offsets";
         String httpMethod = "put";
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
+            if(enableHttps) {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
+            } else {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.PUT);
             
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
@@ -76,7 +75,7 @@ public class ConsumersGroupInstancesInstanceOffsetsPutHandlerTest {
             logger.error("Exception: ", e);
             throw new ClientException(e);
         } finally {
-            IoUtils.safeClose(connection);
+            client.restore(connectionToken);
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         Optional<HeaderValues> contentTypeName = Optional.ofNullable(reference.get().getResponseHeaders().get(Headers.CONTENT_TYPE));
