@@ -1,6 +1,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
+import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.health.HealthConfig;
@@ -9,6 +10,7 @@ import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.ReactiveConsumerStartupHook;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.service.SingletonServiceFactory;
+import com.networknt.utility.Constants;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
 import io.undertow.client.ClientRequest;
@@ -49,7 +51,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
     static final Logger logger = LoggerFactory.getLogger(SidecarHealthHandler.class);
     static final HealthConfig config = (HealthConfig) Config.getInstance().getJsonObjectConfig(HealthConfig.CONFIG_NAME, HealthConfig.class);
     // cached connection to the backend API to speed up the downstream check.
-    static ClientConnection connection = null;
+    public static Http2Client client = Http2Client.getInstance();
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
@@ -111,47 +113,50 @@ public class SidecarHealthHandler implements LightHttpHandler {
     private String backendHealth() {
         String result = HEALTH_RESULT_OK;
         long start = System.currentTimeMillis();
-        if(connection == null || !connection.isOpen()) {
-            try {
-                if(config.getDownstreamHost().startsWith("https")) {
-                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getDownstreamHost()), Http2Client.WORKER, ReactiveConsumerStartupHook.client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-                } else {
-                    connection = ReactiveConsumerStartupHook.client.borrowConnection(new URI(config.getDownstreamHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-                }
-            } catch (Exception ex) {
-                logger.error("Could not create connection to the backend: " + config.getDownstreamHost() + ":", ex);
-                result = HEALTH_RESULT_ERROR;
-                // if connection cannot be established, return error. The backend is not started yet.
-                return result;
-            }
-        }
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
-            ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
-            request.getRequestHeaders().put(Headers.HOST, "localhost");
-            connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
-            latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
-            int statusCode = reference.get().getResponseCode();
-            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-            if(logger.isDebugEnabled()) logger.debug("statusCode = " + statusCode + " body  = " + body);
-            if(statusCode >= 400) {
-                // something happens on the backend and the health check is not respond.
-                logger.error("Error due to error response from backend with status code = " + statusCode + " body = " + body);
+            if(config.getDownstreamHost().startsWith(Constants.HTTPS)) {
+                connectionToken = client.borrow(new URI(config.getDownstreamHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
+            } else {
+                connectionToken = client.borrow(new URI(config.getDownstreamHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+            final CountDownLatch latch = new CountDownLatch(1);
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+
+            try {
+                ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
+                request.getRequestHeaders().put(Headers.HOST, "localhost");
+                connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
+                latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
+                int statusCode = reference.get().getResponseCode();
+                String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+                if(logger.isDebugEnabled()) logger.debug("statusCode = " + statusCode + " body  = " + body);
+                if(statusCode >= 400) {
+                    // something happens on the backend and the health check is not respond.
+                    logger.error("Error due to error response from backend with status code = " + statusCode + " body = " + body);
+                    result = HEALTH_RESULT_ERROR;
+                }
+            } catch (Exception exception) {
+                logger.error("Error while sending a health check request to the backend with exception: ", exception);
+                // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
+                // the connection if there are any exception here to work around the spring boot backend.
+                if(connection != null && connection.isOpen()) {
+                    try { connection.close(); } catch (Exception e) { logger.error("Exception:", e); }
+                }
                 result = HEALTH_RESULT_ERROR;
             }
-        } catch (Exception exception) {
-            logger.error("Error while sending a health check request to the backend with exception: ", exception);
-            // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
-            // the connection if there are any exception here to work around the spring boot backend.
-            if(connection != null && connection.isOpen()) {
-                try { connection.close(); } catch (Exception e) { logger.error("Exception:", e); }
-            }
+            long responseTime = System.currentTimeMillis() - start;
+            if(logger.isDebugEnabled()) logger.debug("Downstream health check response time = " + responseTime);
+            return result;
+        } catch (Exception ex) {
+            logger.error("Could not create connection to the backend: " + config.getDownstreamHost() + ":", ex);
             result = HEALTH_RESULT_ERROR;
+            // if connection cannot be established, return error. The backend is not started yet.
+            return result;
+        } finally {
+            client.restore(connectionToken);
         }
-        long responseTime = System.currentTimeMillis() - start;
-        if(logger.isDebugEnabled()) logger.debug("Downstream health check response time = " + responseTime);
-        return result;
     }
 
     /**

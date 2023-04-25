@@ -1,8 +1,10 @@
 package com.networknt.mesh.kafka;
 
 import com.networknt.client.Http2Client;
+import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaKsqldbConfig;
+import com.networknt.utility.Constants;
 import io.confluent.ksql.api.client.Row;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
@@ -40,19 +42,18 @@ public class RowSubscriber implements Subscriber<Row> {
 
     @Override
     public synchronized void onNext(Row row) {
-        System.out.println("Received a row!");
-        System.out.println("Row: " + row.values());
+        if(logger.isTraceEnabled() && row != null) logger.trace("Received a row: {}", row.values());
         // send the row to the ksqldb-backend instance
-        if(connection == null || !connection.isOpen()) {
-            try {
-                connection = client.borrowConnection(new URI(config.getBackendUrl()), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true)).get();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
+            if (config.getBackendUrl().startsWith(Constants.HTTPS)) {
+                connectionToken = client.borrow(new URI(config.getBackendUrl()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
+            } else {
+                connectionToken = client.borrow(new URI(config.getBackendUrl()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendPath());
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
             request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
@@ -63,7 +64,9 @@ public class RowSubscriber implements Subscriber<Row> {
             logger.debug("statusCode = " + statusCode);
             logger.debug("body = " + body);
         } catch (Exception  e) {
-            e.printStackTrace();
+            logger.error("Exception: ", e);
+        } finally {
+            client.restore(connectionToken);
         }
         // Request the next row
         subscription.request(1);

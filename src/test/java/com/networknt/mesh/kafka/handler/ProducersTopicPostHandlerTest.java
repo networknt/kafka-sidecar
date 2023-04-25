@@ -1,6 +1,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
+import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.exception.ClientException;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
@@ -54,21 +55,19 @@ public class ProducersTopicPostHandlerTest {
 
         final Http2Client client = Http2Client.getInstance();
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection;
-        try {
-            if(enableHttps) {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY).get();
-            } else {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-            }
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/producers/test1";
         String httpMethod = "post";
         String requestBody = "{\"key_schema_id\":1,\"value_schema_id\":2,\"records\":[{\"key\":\"alice\",\"value\":{\"count\":0}},{\"key\":\"john\",\"value\":{\"count\":1}},{\"key\":\"alex\",\"value\":{\"count\":2}}]}";
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
+            if(enableHttps) {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
+            } else {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.POST);
 
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
@@ -81,7 +80,7 @@ public class ProducersTopicPostHandlerTest {
             logger.error("Exception: ", e);
             throw new ClientException(e);
         } finally {
-            IoUtils.safeClose(connection);
+            client.restore(connectionToken);
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " +  body);;
@@ -111,21 +110,20 @@ public class ProducersTopicPostHandlerTest {
 
         final Http2Client client = Http2Client.getInstance();
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection;
-        try {
-            if(enableHttps) {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY).get();
-            } else {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-            }
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/producers/test1";
         String httpMethod = "post";
         String requestBody = "{\"format\":3,\"key_schema_id\":1,\"value_schema_id\":2,\"records\":[{\"key\":\"alice\",\"value\":{\"count\":0}},{\"key\":\"john\",\"value\":{\"count\":1}},{\"key\":\"alex\",\"value\":{\"count\":2}}]}";
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+
         try {
+            if(enableHttps) {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
+            } else {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.POST);
 
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
@@ -138,7 +136,7 @@ public class ProducersTopicPostHandlerTest {
             logger.error("Exception: ", e);
             throw new ClientException(e);
         } finally {
-            IoUtils.safeClose(connection);
+            client.restore(connectionToken);
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " +  body);;
@@ -168,21 +166,20 @@ public class ProducersTopicPostHandlerTest {
 
         final Http2Client client = Http2Client.getInstance();
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection;
-        try {
-            if(enableHttps) {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY).get();
-            } else {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-            }
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/producers/test2";
         String httpMethod = "post";
         String requestBody = "{\"format\":2,\"key_schema_id\":3,\"value_schema_id\":5,\"records\":[{\"key\":\"Alex\",\"value\":{\"count\":0}},{\"key\":\"Alice\",\"value\":{\"count\":1}},{\"key\":\"Bob\",\"value\":{\"count\":2}}]}";
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+
         try {
+            if(enableHttps) {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
+            } else {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.POST);
 
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
@@ -195,7 +192,7 @@ public class ProducersTopicPostHandlerTest {
             logger.error("Exception: ", e);
             throw new ClientException(e);
         } finally {
-            IoUtils.safeClose(connection);
+            client.restore(connectionToken);
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " +  body);;
@@ -225,21 +222,20 @@ public class ProducersTopicPostHandlerTest {
 
         final Http2Client client = Http2Client.getInstance();
         final CountDownLatch latch = new CountDownLatch(1);
-        final ClientConnection connection;
-        try {
-            if(enableHttps) {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.SSL, Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY).get();
-            } else {
-                connection = client.connect(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY).get();
-            }
-        } catch (Exception e) {
-            throw new ClientException(e);
-        }
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/producers/test3";
         String httpMethod = "post";
         String requestBody = "{\"format\":4,\"key_schema_id\":6,\"value_schema_id\":7,\"records\":[{\"key\":{\"name\":\"Steve\"},\"value\":{\"count\":1,\"name\":\"Steve\"}}]}";
+        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+
         try {
+            if(enableHttps) {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
+            } else {
+                connectionToken = client.borrow(new URI(url), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            }
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.POST);
 
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
@@ -252,7 +248,7 @@ public class ProducersTopicPostHandlerTest {
             logger.error("Exception: ", e);
             throw new ClientException(e);
         } finally {
-            IoUtils.safeClose(connection);
+            client.restore(connectionToken);
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " +  body);;
