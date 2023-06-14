@@ -123,6 +123,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                 connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
             }
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+            final SimpleConnectionHolder holder = connectionToken.holder();
             /**
              * Scenario to handle when consumer goes away but container does not die.
              */
@@ -222,14 +223,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     } catch (Exception exception) {
                                         logger.error("Process response exception: ", exception);
                                         // For spring boot backend, the connection created during the liveness and readiness won't work, need to close it to recreate.
-                                        if(connection != null && connection.isOpen()) {
-                                            try {
-                                                connection.close();
-                                            } catch (Exception ei) {
-                                                logger.error("Exception while closing HTTP Client connection", ei);
-                                                healthy=false;
-                                            }
-                                        }
+                                        holder.safeClose(System.currentTimeMillis());
                                         logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
                                         healthy=false;
                                         readyForNextBatch = false;
