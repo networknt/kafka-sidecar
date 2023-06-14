@@ -2,6 +2,7 @@
 
 # client.yml
 client.verifyHostname: false
+client.enableHttp2: true
 
 # server.yml
 server.serviceId: com.networknt.kafka-sidecar-1.0.0

@@ -141,9 +141,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
                 logger.error("Error while sending a health check request to the backend with exception: ", exception);
                 // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
                 // the connection if there are any exception here to work around the spring boot backend.
-                if(connection != null && connection.isOpen()) {
-                    try { connection.close(); } catch (Exception e) { logger.error("Exception:", e); }
-                }
+                connectionToken.holder().safeClose(System.currentTimeMillis());
                 result = HEALTH_RESULT_ERROR;
             }
             long responseTime = System.currentTimeMillis() - start;
