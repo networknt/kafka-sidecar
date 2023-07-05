@@ -32,7 +32,7 @@ public class ConsumersGroupInstancesInstanceAssignmentsGetHandler implements Lig
         String instance = exchange.getPathParameters().get("instance").getFirst();
         Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
         ConsumerAssignmentRequest request = Config.getInstance().getMapper().convertValue(map, ConsumerAssignmentRequest.class);
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance + " request = " + request);
+        if(logger.isDebugEnabled()) logger.debug("group = {} instance = {} request = {}", group, instance, request);
         try {
             ConsumerAssignmentResponse response = ActiveConsumerStartupHook.kafkaConsumerManager.assignment(group, instance);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");

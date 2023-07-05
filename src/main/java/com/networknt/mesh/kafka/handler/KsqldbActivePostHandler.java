@@ -19,7 +19,7 @@ import java.util.Map;
 
 public class KsqldbActivePostHandler implements LightHttpHandler {
     private static Logger logger = LoggerFactory.getLogger(KsqldbActivePostHandler.class);
-    private static String INVALID_KSQL_QUERY = "ERR30002";
+    private static final String INVALID_KSQL_QUERY = "ERR30002";
 
     KsqlDBQueryService service;
 
@@ -27,19 +27,24 @@ public class KsqldbActivePostHandler implements LightHttpHandler {
         this.service = new KsqlDBQueryServiceImpl();
     }
 
+    public void setKsqlDBQueryService(KsqlDBQueryService queryService) { this.service = queryService; }
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
 
         Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
         KsqlDbPullQueryRequest request = Config.getInstance().getMapper().convertValue(map, KsqlDbPullQueryRequest.class);
-        logger.info("ksqldb pull query to run:" +    request.getQuery().replace("\\'", "'"));
+
+        if (logger.isInfoEnabled()) {
+            logger.info("ksqldb pull query to run: {}", request.getQuery().replace("\\'", "'"));
+        }
+
         try {
             List<Map<String, Object>>  queryResult = this.service.executeQuery(request);
             exchange.getResponseHeaders().put(io.undertow.util.Headers.CONTENT_TYPE, "application/json");
             exchange.setStatusCode(200);
             exchange.getResponseSender().send(JsonMapper.toJson(queryResult));
         } catch (Exception e) {
-            logger.error("error happen: " + e);
+            logger.error("error happen: {}", e.toString());
             Status status = new Status(INVALID_KSQL_QUERY);
             status.setDescription(e.getMessage());
             setExchangeStatus(exchange, status);

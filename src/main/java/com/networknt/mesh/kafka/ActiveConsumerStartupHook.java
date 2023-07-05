@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
@@ -23,7 +24,7 @@ public class ActiveConsumerStartupHook implements StartupHookProvider {
     public void onStartup() {
         logger.info("ActiveConsumerStartupHook begins");
         KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
-        kafkaConsumerManager = new KafkaConsumerManager(config);
+        kafkaConsumerManager = KafkaConsumerManagerFactory.createKafkaConsumerManager(config);
         logger.info("ActiveConsumerStartupHook ends");
     }
 }

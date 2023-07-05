@@ -6,6 +6,7 @@ import com.networknt.kafka.entity.KsqlDbPullQueryRequest;
 import com.networknt.mesh.kafka.KsqldbActiveConsumerStartupHook;
 import io.confluent.ksql.api.client.BatchedQueryResult;
 import io.confluent.ksql.api.client.Row;
+import io.confluent.ksql.api.client.exception.KsqlException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +18,7 @@ public class KsqlDBQueryServiceImpl implements KsqlDBQueryService{
     private static Logger logger = LoggerFactory.getLogger(KsqlDBQueryService.class);
 
     @Override
-    public List<Map<String, Object>> executeQuery(KsqlDbPullQueryRequest request)  throws Exception{
+    public List<Map<String, Object>> executeQuery(KsqlDbPullQueryRequest request) {
         BatchedQueryResult batchedQueryResult = null;
         if (request.getProperties().size()>0) {
             batchedQueryResult = KsqldbActiveConsumerStartupHook.client.executeQuery(request.getQuery(), request.getProperties());
@@ -36,7 +37,7 @@ public class KsqlDBQueryServiceImpl implements KsqlDBQueryService{
             CompletableFuture.allOf(completableFutures.toArray(new CompletableFuture[0])).get(ClientConfig.get().getTimeout(), TimeUnit.MILLISECONDS);
         } catch(Exception e) {
             logger.error("Error happen when the ksql processing.", e);
-            throw new Exception("Ksql execution error:" + e);
+            throw new KsqlException("Ksql execution error:" + e);
         }
 
         return records;

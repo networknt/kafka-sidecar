@@ -41,7 +41,7 @@ public class ConsumersGroupPostHandler implements LightHttpHandler {
             map.put(VALUE_FORMAT, config.getValueFormat());
         }
         CreateConsumerInstanceRequest request = Config.getInstance().getMapper().convertValue(map, CreateConsumerInstanceRequest.class);
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " request = " + request);
+        if(logger.isDebugEnabled()) logger.debug("group = {} request = {}", group, request);
         String instanceId = ActiveConsumerStartupHook.kafkaConsumerManager.createConsumer(group, request.toConsumerInstanceConfig());
         String instanceBaseUri = "/consumers/" + group + "/instances/"  + instanceId;
         CreateConsumerInstanceResponse response = new CreateConsumerInstanceResponse(instanceId, instanceBaseUri);
