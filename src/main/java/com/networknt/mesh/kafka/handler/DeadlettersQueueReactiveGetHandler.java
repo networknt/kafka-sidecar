@@ -175,7 +175,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                     logger.debug("polled records size = " + records.size());
                 final CountDownLatch latch = new CountDownLatch(1);
                 final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-                
+
                 try {
                     ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
                     request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");

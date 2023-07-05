@@ -119,31 +119,31 @@ public class SidecarHealthHandler implements LightHttpHandler {
                 connectionToken = client.borrow(new URI(config.getDownstreamHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
             }
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
-        final CountDownLatch latch = new CountDownLatch(1);
-        final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-        try {
-            ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
-            request.getRequestHeaders().put(Headers.HOST, "localhost");
-            connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
-            latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
-            int statusCode = reference.get().getResponseCode();
-            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-            if(logger.isDebugEnabled()) logger.debug("statusCode = {} body  = {}", statusCode, body);
-            if(statusCode >= 400) {
-                // something happens on the backend and the health check is not respond.
-                logger.error("Error due to error response from backend with status code = {} body = {}", statusCode, body);
+            final CountDownLatch latch = new CountDownLatch(1);
+            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+            try {
+                ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
+                request.getRequestHeaders().put(Headers.HOST, "localhost");
+                connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
+                latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
+                int statusCode = reference.get().getResponseCode();
+                String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+                if(logger.isDebugEnabled()) logger.debug("statusCode = {} body  = {}", statusCode, body);
+                if(statusCode >= 400) {
+                    // something happens on the backend and the health check is not respond.
+                    logger.error("Error due to error response from backend with status code = {} body = {}", statusCode, body);
+                    result = HEALTH_RESULT_ERROR;
+                }
+            } catch (Exception exception) {
+                logger.error("Error while sending a health check request to the backend with exception: ", exception);
+                // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
+                // the connection if there are any exception here to work around the spring boot backend.
+                connectionToken.holder().safeClose(System.currentTimeMillis());
                 result = HEALTH_RESULT_ERROR;
             }
-        } catch (Exception exception) {
-            logger.error("Error while sending a health check request to the backend with exception: ", exception);
-            // for Java EE backend like spring boot, the connection created and opened but might not ready. So we need to close
-            // the connection if there are any exception here to work around the spring boot backend.
-            connectionToken.holder().safeClose(System.currentTimeMillis());
-            result = HEALTH_RESULT_ERROR;
-        }
-        long responseTime = System.currentTimeMillis() - start;
-        if(logger.isDebugEnabled()) logger.debug("Downstream health check response time = {}", responseTime);
-        return result;
+            long responseTime = System.currentTimeMillis() - start;
+            if(logger.isDebugEnabled()) logger.debug("Downstream health check response time = {}", responseTime);
+            return result;
         } catch (Exception ex) {
             logger.error("Could not create connection to the backend: " + config.getDownstreamHost() + ":", ex);
             result = HEALTH_RESULT_ERROR;
