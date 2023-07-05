@@ -138,8 +138,8 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
             }
             // if we cannot borrow the token when the downstream API is not available, an exception will be thrown.
             connection = (ClientConnection) connectionToken.getRawConnection();
-        while(index <20 && recordsCount ==0 ) {
-            returnedResult =readRecords(
+            while(index <20 && recordsCount ==0 ) {
+                returnedResult =readRecords(
                         exchange,
                         groupId,
                         instanceId,
@@ -157,117 +157,118 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
 //                System.out.println(index);
 
                 index++;
-        }
-        if(ObjectUtils.isEmpty(returnedResult) || (!ObjectUtils.isEmpty(returnedResult.get()) && returnedResult.get().isSuccess() && ObjectUtils.isEmpty(returnedResult.get().getResult()))) {
-            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-            exchange.setStatusCode(200);
-            DeadLetterQueueReplayResponse deadLetterQueueReplayResponse = new DeadLetterQueueReplayResponse();
-            deadLetterQueueReplayResponse.setGroup(groupId);
-            deadLetterQueueReplayResponse.setTopics(topics);
-            deadLetterQueueReplayResponse.setInstance(instanceId);
-            deadLetterQueueReplayResponse.setRecords(0L);
-            deadLetterQueueReplayResponse.setDescription("Dead letter queue process successful to end, no records processed");
-            exchange.getResponseSender().send(JsonMapper.toJson(deadLetterQueueReplayResponse));
-        }
-        else if(!ObjectUtils.isEmpty(returnedResult) && !ObjectUtils.isEmpty(returnedResult.get()) && returnedResult.get().isSuccess() && !ObjectUtils.isEmpty(returnedResult.get().getResult()) && returnedResult.get().getResult().size() !=0){
-            records= returnedResult.get().getResult();
-            if (logger.isDebugEnabled())
-                logger.debug("polled records size = " + records.size());
-            final CountDownLatch latch = new CountDownLatch(1);
-            final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-            try {
-                ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
-                request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                if(config.isBackendConnectionReset()) {
-                    request.getRequestHeaders().put(Headers.CONNECTION, "close");
-                }
-                request.getRequestHeaders().put(Headers.HOST, "localhost");
-                if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
-
-                connection.sendRequest(request, Http2Client.getInstance().createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(SidecarConsumerRecord::fromConsumerRecord).collect(Collectors.toList()))));
-                latch.await();
-                int statusCode = reference.get().getResponseCode();
-                String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-                /**
-                 * If consumer has exited by the time backend responds back,
-                 * then create another subscription.
-                 */
-                if(null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
-                        null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
-                        StringUtils.isEmpty(ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                    subscribeTopic(topics);
-                    logger.info("Resubscribed to topic as consumer had exited .");
-                }
+            }
+            if(ObjectUtils.isEmpty(returnedResult) || (!ObjectUtils.isEmpty(returnedResult.get()) && returnedResult.get().isSuccess() && ObjectUtils.isEmpty(returnedResult.get().getResult()))) {
+                exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+                exchange.setStatusCode(200);
+                DeadLetterQueueReplayResponse deadLetterQueueReplayResponse = new DeadLetterQueueReplayResponse();
+                deadLetterQueueReplayResponse.setGroup(groupId);
+                deadLetterQueueReplayResponse.setTopics(topics);
+                deadLetterQueueReplayResponse.setInstance(instanceId);
+                deadLetterQueueReplayResponse.setRecords(0L);
+                deadLetterQueueReplayResponse.setDescription("Dead letter queue process successful to end, no records processed");
+                exchange.getResponseSender().send(JsonMapper.toJson(deadLetterQueueReplayResponse));
+            }
+            else if(!ObjectUtils.isEmpty(returnedResult) && !ObjectUtils.isEmpty(returnedResult.get()) && returnedResult.get().isSuccess() && !ObjectUtils.isEmpty(returnedResult.get().getResult()) && returnedResult.get().getResult().size() !=0){
+                records= returnedResult.get().getResult();
                 if (logger.isDebugEnabled())
-                    logger.debug("statusCode = " + statusCode + " body  = " + body);
-                if (statusCode >= 400) {
-                    // something happens on the backend and the data is not consumed correctly.
-                    logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
-                    ReactiveConsumerStartupHook.kafkaConsumerManager.rollback(records, groupId, instanceId);
-                    ReactiveConsumerStartupHook.kafkaConsumerManager.rollbackExchangeDefinition(exchange,groupId, instanceId, topics, records);
-                } else {
-                    // The body will contains RecordProcessedResult for dead letter queue and audit.
-                    // Write the dead letter queue if necessary.
-                    if (logger.isInfoEnabled())
-                        logger.info("Got successful response from the backend API");
-                    processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, lastRetry);
+                    logger.debug("polled records size = " + records.size());
+                final CountDownLatch latch = new CountDownLatch(1);
+                final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+                
+                try {
+                    ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
+                    request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+                    request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                    if(config.isBackendConnectionReset()) {
+                        request.getRequestHeaders().put(Headers.CONNECTION, "close");
+                    }
+                    request.getRequestHeaders().put(Headers.HOST, "localhost");
+                    if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API");
+
+                    connection.sendRequest(request, Http2Client.getInstance().createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(SidecarConsumerRecord::fromConsumerRecord).collect(Collectors.toList()))));
+                    latch.await();
+                    int statusCode = reference.get().getResponseCode();
+                    String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
                     /**
-                     * If it is a new consumer , we need to seek to returned offset.
-                     * If existing consumer instance, then commit offset.
-                     *
-                     *
-                     * REVISED: Always seek to the offset of last record in the processed batch for each topic and each partition
+                     * If consumer has exited by the time backend responds back,
+                     * then create another subscription.
                      */
-
-                    List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= ReactiveConsumerStartupHook.topicPartitionOffsetMetadataUtility(records);
-                    ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
-                    ReactiveConsumerStartupHook.kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
-                        if(null !=e1){
-                            logger.error("Error committing offset, will force a restart ", e1);
-                            throw new RuntimeException(e1.getMessage());
-                        }
-                        else{
-                            topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
-                                logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
-                                        " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
-                            }));
-                        }
-                    });
+                    if(null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                            null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                            StringUtils.isEmpty(ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                        subscribeTopic(topics);
+                        logger.info("Resubscribed to topic as consumer had exited .");
+                    }
                     if (logger.isDebugEnabled())
-                        logger.debug("total dlq records processed:" + records.size());
-                    ReactiveConsumerStartupHook.kafkaConsumerManager.successExchangeDefinition(exchange, groupId, instanceId, topics, records);
+                        logger.debug("statusCode = " + statusCode + " body  = " + body);
+                    if (statusCode >= 400) {
+                        // something happens on the backend and the data is not consumed correctly.
+                        logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
+                        ReactiveConsumerStartupHook.kafkaConsumerManager.rollback(records, groupId, instanceId);
+                        ReactiveConsumerStartupHook.kafkaConsumerManager.rollbackExchangeDefinition(exchange,groupId, instanceId, topics, records);
+                    } else {
+                        // The body will contains RecordProcessedResult for dead letter queue and audit.
+                        // Write the dead letter queue if necessary.
+                        if (logger.isInfoEnabled())
+                            logger.info("Got successful response from the backend API");
+                        processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, lastRetry);
+                        /**
+                         * If it is a new consumer , we need to seek to returned offset.
+                         * If existing consumer instance, then commit offset.
+                         *
+                         *
+                         * REVISED: Always seek to the offset of last record in the processed batch for each topic and each partition
+                         */
 
+                        List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= ReactiveConsumerStartupHook.topicPartitionOffsetMetadataUtility(records);
+                        ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
+                        ReactiveConsumerStartupHook.kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
+                            if(null !=e1){
+                                logger.error("Error committing offset, will force a restart ", e1);
+                                throw new RuntimeException(e1.getMessage());
+                            }
+                            else{
+                                topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
+                                    logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
+                                            " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
+                                }));
+                            }
+                        });
+                        if (logger.isDebugEnabled())
+                            logger.debug("total dlq records processed:" + records.size());
+                        ReactiveConsumerStartupHook.kafkaConsumerManager.successExchangeDefinition(exchange, groupId, instanceId, topics, records);
+
+                    }
+                } catch (Exception exception) {
+                    logger.error("Rollback due to process response exception: ", exception);
+                    /**
+                     * If consumer has exited by the time backend responds back,
+                     * then create another subscription.
+                     */
+                    if(null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                            null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                            StringUtils.isEmpty(ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                        subscribeTopic(topics);
+                        logger.info("Resubscribed to topic as consumer had exited .");
+                    }
+                    ReactiveConsumerStartupHook.kafkaConsumerManager.rollback(records, groupId, instanceId);
+                    ReactiveConsumerStartupHook.kafkaConsumerManager.rollbackExchangeDefinition(exchange, groupId, instanceId, topics, records);
                 }
-            } catch (Exception exception) {
-                logger.error("Rollback due to process response exception: ", exception);
-                /**
-                 * If consumer has exited by the time backend responds back,
-                 * then create another subscription.
-                 */
-                if(null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
-                        null == ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
-                        StringUtils.isEmpty(ReactiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                    subscribeTopic(topics);
-                    logger.info("Resubscribed to topic as consumer had exited .");
-                }
-                ReactiveConsumerStartupHook.kafkaConsumerManager.rollback(records, groupId, instanceId);
-                ReactiveConsumerStartupHook.kafkaConsumerManager.rollbackExchangeDefinition(exchange, groupId, instanceId, topics, records);
+
             }
-
-        }
-        else{
-            setExchangeStatus(exchange, returnedResult.get().getError());
-            return;
-        }
-        }catch (Exception e) {
-                logger.error("Exception:", e);
-                setExchangeStatus(exchange, UNEXPECTED_CONSUMER_READ_EXCEPTION);
-                exchange.endExchange();
+            else{
+                setExchangeStatus(exchange, returnedResult.get().getError());
                 return;
-            } finally {
-                client.restore(connectionToken);
             }
+        }catch (Exception e) {
+            logger.error("Exception:", e);
+            setExchangeStatus(exchange, UNEXPECTED_CONSUMER_READ_EXCEPTION);
+            exchange.endExchange();
+            return;
+        } finally {
+            client.restore(connectionToken);
+        }
 
     }
 
