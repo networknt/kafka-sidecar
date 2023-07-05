@@ -1,6 +1,6 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.streams;
+package com.networknt.mesh.kafka.streams;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.util.StreamsFactory;
+import com.networknt.mesh.kafka.util.StreamsFactory;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.streams.LightStreams;

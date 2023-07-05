@@ -1,7 +1,7 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.ActiveConsumerStartupHook;
-import ca.sunlife.eadp.eventhub.mesh.kafka.WriteAuditLog;
+import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
+import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.client.Http2Client;
 import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.config.Config;

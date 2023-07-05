@@ -1,4 +1,4 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka;
+package com.networknt.mesh.kafka;
 
 import com.networknt.server.ShutdownHookProvider;
 import org.slf4j.Logger;

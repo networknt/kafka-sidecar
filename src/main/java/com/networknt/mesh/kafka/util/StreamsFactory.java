@@ -1,7 +1,7 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler;
-import ca.sunlife.eadp.eventhub.mesh.kafka.streams.MessageReplayStreams;
+import com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler;
+import com.networknt.mesh.kafka.streams.MessageReplayStreams;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
 

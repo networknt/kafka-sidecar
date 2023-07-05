@@ -1,9 +1,9 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.streams;
+package com.networknt.mesh.kafka.streams;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.ActiveConsumerStartupHook;
-import ca.sunlife.eadp.eventhub.mesh.kafka.ProducerStartupHook;
-import ca.sunlife.eadp.eventhub.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler;
-import ca.sunlife.eadp.eventhub.mesh.kafka.util.*;
+import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
+import com.networknt.mesh.kafka.ProducerStartupHook;
+import com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGetHandler;
+import com.networknt.mesh.kafka.util.*;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;

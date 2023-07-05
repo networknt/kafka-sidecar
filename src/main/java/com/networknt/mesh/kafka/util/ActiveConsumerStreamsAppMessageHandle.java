@@ -1,6 +1,6 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.WriteAuditLog;
+import com.networknt.mesh.kafka.WriteAuditLog;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;

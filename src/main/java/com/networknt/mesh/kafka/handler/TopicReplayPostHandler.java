@@ -1,7 +1,7 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.handler;
+package com.networknt.mesh.kafka.handler;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.ProducerStartupHook;
-import ca.sunlife.eadp.eventhub.mesh.kafka.WriteAuditLog;
+import com.networknt.mesh.kafka.ProducerStartupHook;
+import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;

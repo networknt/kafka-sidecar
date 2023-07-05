@@ -1,4 +1,4 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.entity.AuditRecord;

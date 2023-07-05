@@ -1,6 +1,6 @@
 package com.networknt.mesh.kafka;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.util.KafkaConsumerManagerFactory;
+import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.client.ClientConfig;
 import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.kafka.producer.NativeLightProducer;

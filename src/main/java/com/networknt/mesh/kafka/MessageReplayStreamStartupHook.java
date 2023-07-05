@@ -1,7 +1,7 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka;
+package com.networknt.mesh.kafka;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.streams.MessageReplayStreams;
-import ca.sunlife.eadp.eventhub.mesh.kafka.util.StreamsFactory;
+import com.networknt.mesh.kafka.streams.MessageReplayStreams;
+import com.networknt.mesh.kafka.util.StreamsFactory;
 import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.NetUtils;

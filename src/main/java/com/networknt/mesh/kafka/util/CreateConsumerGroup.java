@@ -1,6 +1,6 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.ActiveConsumerStartupHook;
+import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.CreateConsumerInstanceRequest;

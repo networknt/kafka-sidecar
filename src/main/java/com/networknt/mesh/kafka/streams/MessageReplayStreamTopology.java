@@ -1,6 +1,6 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.streams;
+package com.networknt.mesh.kafka.streams;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.util.CustomSerdes;
+import com.networknt.mesh.kafka.util.CustomSerdes;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.entity.StreamsDLQMetadata;

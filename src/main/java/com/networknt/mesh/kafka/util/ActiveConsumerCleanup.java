@@ -1,6 +1,6 @@
-package ca.sunlife.eadp.eventhub.mesh.kafka.util;
+package com.networknt.mesh.kafka.util;
 
-import ca.sunlife.eadp.eventhub.mesh.kafka.ActiveConsumerStartupHook;
+import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.kafka.consumer.KafkaConsumerState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
