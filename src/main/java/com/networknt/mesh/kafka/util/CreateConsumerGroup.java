@@ -58,7 +58,7 @@ public class CreateConsumerGroup {
 
     /**
      * 
-     * @param instanceId
+     * @param instanceId A string instance Id
      */
     public void setInstanceId(String instanceId){
         this.instanceId=instanceId;

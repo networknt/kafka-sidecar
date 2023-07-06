@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
