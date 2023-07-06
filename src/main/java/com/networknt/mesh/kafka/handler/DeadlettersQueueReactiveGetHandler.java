@@ -54,7 +54,6 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     private static String UNEXPECTED_CONSUMER_READ_EXCEPTION = "ERR12205";
     private static String INVALID_TOPIC_NAME = "ERR30001";
     private static String REPLAY_DEFAULT_INSTANCE = "Reactive-Replay-"+ getIP();
-
     public static Http2Client client = Http2Client.getInstance();
     private  boolean lastRetry = false;
     String instanceId;
@@ -62,6 +61,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     private AtomicReference<Result<List<ConsumerRecord<Object, Object>>>> result = new AtomicReference<>();
     public List<AuditRecord> auditRecords = new ArrayList<>();
     SidecarProducer lightProducer;
+    ClientConnection connection;
 
     public DeadlettersQueueReactiveGetHandler() {
         if(config.isDeadLetterEnabled()) {
@@ -117,8 +117,12 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 return;
             }
         }
+        //   String topic = exchange.getQuer(Arrays.asListyParameters().get("topic")==null? config.getTopic() : exchange.getQueryParameters().get("topic").getFirst();
+
         topics=topics.stream().map(t->t + config.getDeadLetterTopicExt()).collect(Collectors.toList());
+
         ConsumerSubscriptionRecord subscription = subscribeTopic(topics);
+
         exchange.dispatch();
         long recordsCount=0;
         int index=0;
@@ -133,7 +137,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
             }
             // if we cannot borrow the token when the downstream API is not available, an exception will be thrown.
-            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+            connection = (ClientConnection) connectionToken.getRawConnection();
             while(index <20 && recordsCount ==0 ) {
                 returnedResult =readRecords(
                         exchange,
@@ -150,6 +154,8 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 else{
                     Thread.sleep(config.getWaitPeriod());
                 }
+//                System.out.println(index);
+
                 index++;
             }
             if(ObjectUtils.isEmpty(returnedResult) || (!ObjectUtils.isEmpty(returnedResult.get()) && returnedResult.get().isSuccess() && ObjectUtils.isEmpty(returnedResult.get().getResult()))) {
@@ -169,6 +175,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                     logger.debug("polled records size = " + records.size());
                 final CountDownLatch latch = new CountDownLatch(1);
                 final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+
                 try {
                     ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
                     request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
@@ -205,7 +212,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                         // Write the dead letter queue if necessary.
                         if (logger.isInfoEnabled())
                             logger.info("Got successful response from the backend API");
-                        processResponse(lightProducer, config, body, statusCode, records.size(), auditRecords, lastRetry);
+                        processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, lastRetry);
                         /**
                          * If it is a new consumer , we need to seek to returned offset.
                          * If existing consumer instance, then commit offset.
@@ -248,13 +255,13 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                     ReactiveConsumerStartupHook.kafkaConsumerManager.rollback(records, groupId, instanceId);
                     ReactiveConsumerStartupHook.kafkaConsumerManager.rollbackExchangeDefinition(exchange, groupId, instanceId, topics, records);
                 }
+
             }
             else{
                 setExchangeStatus(exchange, returnedResult.get().getError());
-                exchange.endExchange();
                 return;
             }
-        } catch (Exception e) {
+        }catch (Exception e) {
             logger.error("Exception:", e);
             setExchangeStatus(exchange, UNEXPECTED_CONSUMER_READ_EXCEPTION);
             exchange.endExchange();
@@ -262,6 +269,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
         } finally {
             client.restore(connectionToken);
         }
+
     }
 
     private AtomicReference<Result<List<ConsumerRecord<Object, Object>>>> readRecords(
@@ -276,33 +284,42 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     ) {
 
         maxBytes = (maxBytes <= 0) ? Long.MAX_VALUE : maxBytes;
-        ReactiveConsumerStartupHook.kafkaConsumerManager.readRecords(
-                group, instance, consumerStateType, timeout, maxBytes,
-                new ConsumerReadCallback<Object, Object>() {
-                    @Override
-                    public void onCompletion(
-                            List<ConsumerRecord<Object, Object>> records, FrameworkException e
-                    ) {
-                        if (e != null) {
-                            logger.error("FrameworkException:", e);
-                            Status status = new Status(UNEXPECTED_CONSUMER_READ_EXCEPTION, e.getMessage());
-                            result.set(Failure.of(status));
-                        } else {
-                            if (records.size() > 0) {
-                                result.set(Success.of(records));
+        try {
+            if (connection != null && connection.isOpen()) {
+                ReactiveConsumerStartupHook.kafkaConsumerManager.readRecords(
+                        group, instance, consumerStateType, timeout, maxBytes,
+                        new ConsumerReadCallback<Object, Object>() {
+                            @Override
+                            public void onCompletion(
+                                    List<ConsumerRecord<Object, Object>> records, FrameworkException e
+                            ) {
+                                if (e != null) {
+                                    logger.error("FrameworkException:", e);
+                                    Status status = new Status(UNEXPECTED_CONSUMER_READ_EXCEPTION, e.getMessage());
+                                    result.set(Failure.of(status));
+                                } else {
+                                    if (records.size() > 0) {
+                                        result.set(Success.of(records));
 
-                                if (logger.isDebugEnabled())
-                                    logger.debug("polled records size = " + records.size());
+                                        if (logger.isDebugEnabled())
+                                            logger.debug("polled records size = " + records.size());
 
-                            }
-                            else{
-                                result.set(Success.of(null));
+                                    }
+                                    else{
+                                        result.set(Success.of(null));
+                                    }
+                                }
                             }
                         }
-                    }
-                }
-        );
+                );
+                return result;
+            }
+        }
+        catch (Exception exc) {
+            logger.info("Could not borrow backend connection , please retry !!!", exc);
+        }
         return result;
+
     }
 
     public ConsumerSubscriptionRecord subscribeTopic(List<String> topics){

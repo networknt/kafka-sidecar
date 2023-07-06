@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
@@ -82,7 +83,7 @@ public class WriteAuditLog {
         }
     }
 
-    public void processResponse(SidecarProducer lightProducer, KafkaConsumerConfig config, String responseBody, int statusCode, int recordSize, List<AuditRecord> auditRecords, boolean dlqLastRetry) {
+    public void processResponse(KafkaConsumerManager kafkaConsumerManager, SidecarProducer lightProducer, KafkaConsumerConfig config, String responseBody, int statusCode, int recordSize, List<AuditRecord> auditRecords, boolean dlqLastRetry) {
         if(responseBody != null) {
             long start = System.currentTimeMillis();
             List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
@@ -113,7 +114,7 @@ public class WriteAuditLog {
                         if(config.getValueFormat() != null) {
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
-                        org.apache.kafka.common.header.Headers headers = ReactiveConsumerStartupHook.kafkaConsumerManager.populateHeaders(result);
+                        org.apache.kafka.common.header.Headers headers = kafkaConsumerManager.populateHeaders(result);
                         CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
@@ -135,6 +136,20 @@ public class WriteAuditLog {
                     }
                     catch(Exception e){
                         logger.error("Could not process record for traceability id ::: "+ result.getTraceabilityId() + ", correlation id ::: "+ result.getCorrelationId() + " to produce record for DLQ, will skip and proceed for next record ", e);
+                        AuditRecord auditRecord = new AuditRecord();
+                        auditRecord.setTopic(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt());
+                        auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
+                        auditRecord.setAuditStatus(AuditRecord.AuditStatus.FAILURE);
+                        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
+                        auditRecord.setStacktrace(e.getMessage());
+                        auditRecord.setOffset(0);
+                        auditRecord.setPartition(0);
+                        auditRecord.setTraceabilityId(result.getCorrelationId());
+                        auditRecord.setCorrelationId(result.getCorrelationId());
+                        auditRecord.setTimestamp(System.currentTimeMillis());
+                        auditRecord.setKey(result.getKey());
+                        auditRecord.setId(UUID.randomUUID().toString());
+                        writeAuditLog(auditRecord, config.getAuditTarget(), config.getAuditTopic());
                     }
                 }
                 if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());

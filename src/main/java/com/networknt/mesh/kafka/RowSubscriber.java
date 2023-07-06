@@ -29,12 +29,9 @@ public class RowSubscriber implements Subscriber<Row> {
     private Subscription subscription;
     private KafkaKsqldbConfig config = (KafkaKsqldbConfig) Config.getInstance().getJsonObjectConfig(KafkaKsqldbConfig.CONFIG_NAME, KafkaKsqldbConfig.class);
 
-    public RowSubscriber() {
-    }
-
     @Override
     public synchronized void onSubscribe(Subscription subscription) {
-        System.out.println("Subscriber is subscribed.");
+        logger.info("Subscriber is subscribed.");
         this.subscription = subscription;
         // Request the first row
         subscription.request(1);
@@ -42,11 +39,15 @@ public class RowSubscriber implements Subscriber<Row> {
 
     @Override
     public synchronized void onNext(Row row) {
-        if(logger.isTraceEnabled() && row != null) logger.trace("Received a row: {}", row.values());
+        logger.info("Received a row!");
+        logger.info("Row: {}", row.values());
         // send the row to the ksqldb-backend instance
+
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+
         SimpleConnectionHolder.ConnectionToken connectionToken = null;
+
         try {
             if (config.getBackendUrl().startsWith(Constants.HTTPS)) {
                 connectionToken = client.borrow(new URI(config.getBackendUrl()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -61,10 +62,10 @@ public class RowSubscriber implements Subscriber<Row> {
             latch.await();
             int statusCode = reference.get().getResponseCode();
             String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-            logger.debug("statusCode = " + statusCode);
-            logger.debug("body = " + body);
-        } catch (Exception  e) {
-            logger.error("Exception: ", e);
+            logger.debug("statusCode = {}", statusCode);
+            logger.debug("body = {}", body);
+        } catch (Exception e) {
+            logger.error("exception thrown in onNext send request", e);
         } finally {
             client.restore(connectionToken);
         }
@@ -74,11 +75,11 @@ public class RowSubscriber implements Subscriber<Row> {
 
     @Override
     public synchronized void onError(Throwable t) {
-        System.out.println("Received an error: " + t);
+        logger.info("Received an error: ", t);
     }
 
     @Override
     public synchronized void onComplete() {
-        System.out.println("Query has ended.");
+        logger.info("Query has ended.");
     }
 }

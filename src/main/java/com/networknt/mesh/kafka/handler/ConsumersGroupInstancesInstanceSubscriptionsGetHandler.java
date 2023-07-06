@@ -15,8 +15,7 @@ For more information on how to write business handlers, please check the link be
 https://doc.networknt.com/development/business-handler/rest/
 */
 public class ConsumersGroupInstancesInstanceSubscriptionsGetHandler implements LightHttpHandler {
-    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstanceDeleteHandler.class);
-    private static final String CONSUMER_INSTANCE_NOT_FOUND = "ERR12200";
+    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstanceSubscriptionsGetHandler.class);
 
     public ConsumersGroupInstancesInstanceSubscriptionsGetHandler () {
         if(logger.isDebugEnabled()) logger.debug("ConsumersGroupInstancesInstanceSubscriptionsGetHandler constructed!");
@@ -26,7 +25,7 @@ public class ConsumersGroupInstancesInstanceSubscriptionsGetHandler implements L
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String group = exchange.getPathParameters().get("group").getFirst();
         String instance = exchange.getPathParameters().get("instance").getFirst();
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance);
+        if(logger.isDebugEnabled()) logger.debug("group = {} instance = {}", group, instance);
         try {
             ConsumerSubscriptionResponse response = ActiveConsumerStartupHook.kafkaConsumerManager.subscription(group, instance);
             exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");

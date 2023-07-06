@@ -17,7 +17,7 @@ For more information on how to write business handlers, please check the link be
 https://doc.networknt.com/development/business-handler/rest/
 */
 public class ConsumersGroupInstancesInstancePositionsPostHandler implements LightHttpHandler {
-    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstanceDeleteHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstancePositionsPostHandler.class);
 
     public ConsumersGroupInstancesInstancePositionsPostHandler () {
         if(logger.isDebugEnabled()) logger.debug("ConsumersGroupInstancesInstancePositionsPostHandler constructed!");
@@ -29,7 +29,7 @@ public class ConsumersGroupInstancesInstancePositionsPostHandler implements Ligh
         String instance = exchange.getPathParameters().get("instance").getFirst();
         Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
         ConsumerSeekRequest request = Config.getInstance().getMapper().convertValue(map, ConsumerSeekRequest.class);
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance + " request = " + request);
+        if(logger.isDebugEnabled()) logger.debug("group = {} instance = {} request = {}", group, instance, request);
         try {
             ActiveConsumerStartupHook.kafkaConsumerManager.seek(group, instance, request);
             exchange.setStatusCode(204);

@@ -13,8 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -35,29 +38,61 @@ public class ConsumersGroupInstancesInstanceRecordsGetHandler implements LightHt
         String group = exchange.getPathParameters().get("group").getFirst();
         String instance = exchange.getPathParameters().get("instance").getFirst();
         Deque<String> dequeTimeout = exchange.getQueryParameters().get("timeout");
+        Deque<String> dequeMaxBytes = exchange.getQueryParameters().get("maxBytes");
+
+        try{
+            String result = activeReadRecordUtil(group,instance,dequeTimeout, dequeMaxBytes);
+            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
+            exchange.setStatusCode(200);
+            exchange.getResponseSender().send(result);
+        }
+        catch(FrameworkException e){
+            if(logger.isDebugEnabled()) logger.debug("FrameworkException: ", e);
+            setExchangeStatus(exchange, e.getStatus());
+        }
+        catch(Exception e){
+            if(logger.isDebugEnabled()) logger.debug("Exception: ", e);
+            setExchangeStatus(exchange, e.getMessage());
+        }
+    }
+
+
+    public String activeReadRecordUtil(String group,String instance, Deque<String> dequeTimeout ,Deque<String> dequeMaxBytes){
+
         long timeoutMs = -1;
         if(dequeTimeout != null) {
             timeoutMs = Long.valueOf(dequeTimeout.getFirst());
         }
-        Deque<String> dequeMaxBytes = exchange.getQueryParameters().get("maxBytes");
+
         long maxBytes = -1;
         if(dequeMaxBytes != null) {
             maxBytes = Long.valueOf(dequeMaxBytes.getFirst());
         }
         // String format = exchange.getQueryParameters().get("format").getFirst();
         // TODO find a way to overwrite the default configuration for the keyFormat and valueFormat from the query parameters.
-        readRecords(
-                exchange,
-                group,
-                instance,
-                Duration.ofMillis(timeoutMs),
-                maxBytes,
-                KafkaConsumerState.class,
-                SidecarConsumerRecord::fromConsumerRecord);
+        try {
+            CompletableFuture<String> completedFuture= readRecords(
+                    group,
+                    instance,
+                    Duration.ofMillis(timeoutMs),
+                    maxBytes,
+                    KafkaConsumerState.class,
+                    SidecarConsumerRecord::fromConsumerRecord);
+
+            return completedFuture.get();
+        }
+        catch(FrameworkException e){
+            throw new FrameworkException(e.getStatus());
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e.getMessage());
+        } catch (ExecutionException e) {
+            throw new RuntimeException(e.getMessage());
+        }
+
+
     }
 
-    private <KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT> void readRecords(
-            HttpServerExchange exchange,
+    private <KafkaKeyT, KafkaValueT, ClientKeyT, ClientValueT> CompletableFuture<String> readRecords(
             String group,
             String instance,
             Duration timeout,
@@ -66,25 +101,25 @@ public class ConsumersGroupInstancesInstanceRecordsGetHandler implements LightHt
                     consumerStateType,
             Function<ConsumerRecord<ClientKeyT, ClientValueT>, ?> toJsonWrapper
     ) {
+
+        CompletableFuture<String> completedFuture = new CompletableFuture<String>();
         maxBytes = (maxBytes <= 0) ? Long.MAX_VALUE : maxBytes;
         ActiveConsumerStartupHook.kafkaConsumerManager.readRecords(
                 group, instance, consumerStateType, timeout, maxBytes,
                 new ConsumerReadCallback<ClientKeyT, ClientValueT>() {
-                    @Override
                     public void onCompletion(
                             List<ConsumerRecord<ClientKeyT, ClientValueT>> records, FrameworkException e
                     ) {
                         if (e != null) {
-                            if(logger.isDebugEnabled()) logger.debug("FrameworkException:", e);
-                            setExchangeStatus(exchange, e.getStatus());
+                            throw new FrameworkException(e.getStatus());
                         } else {
-                            exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                            exchange.setStatusCode(200);
-                            exchange.getResponseSender().send(JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList())));
+                            completedFuture.complete(JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList())));
+                            ;
                         }
                     }
                 }
         );
+        return completedFuture;
     }
 
 }

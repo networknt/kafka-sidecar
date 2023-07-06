@@ -22,7 +22,7 @@ public class ConsumersGroupInstancesInstanceDeleteHandler implements LightHttpHa
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String group = exchange.getPathParameters().get("group").getFirst();
         String instance = exchange.getPathParameters().get("instance").getFirst();
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance);
+        if(logger.isDebugEnabled()) logger.debug("group = {} instance = {}", group, instance);
         try {
             ActiveConsumerStartupHook.kafkaConsumerManager.deleteConsumer(group, instance);
             exchange.setStatusCode(204);

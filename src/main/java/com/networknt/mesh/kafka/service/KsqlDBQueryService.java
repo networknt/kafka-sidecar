@@ -6,5 +6,5 @@ import java.util.List;
 import java.util.Map;
 
 public interface KsqlDBQueryService {
-    List<Map<String, Object>> executeQuery(KsqlDbPullQueryRequest request) throws Exception;
+    List<Map<String, Object>> executeQuery(KsqlDbPullQueryRequest request);
 }

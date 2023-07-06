@@ -11,7 +11,7 @@ public class AdminClientShutdownHook  implements ShutdownHookProvider {
     public void onShutdown() {
         logger.info("AdminClientShutdownHook begins");
         if(AdminClientStartupHook.admin != null) {
-            AdminClientStartupHook.admin.close();;
+            AdminClientStartupHook.admin.close();
         }
         logger.info("AdminClientShutdownHook ends");
     }

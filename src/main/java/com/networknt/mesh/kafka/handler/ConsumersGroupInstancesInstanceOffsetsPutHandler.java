@@ -19,7 +19,7 @@ For more information on how to write business handlers, please check the link be
 https://doc.networknt.com/development/business-handler/rest/
 */
 public class ConsumersGroupInstancesInstanceOffsetsPutHandler implements LightHttpHandler {
-    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstanceDeleteHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(ConsumersGroupInstancesInstanceOffsetsPutHandler.class);
 
     public ConsumersGroupInstancesInstanceOffsetsPutHandler () {
         if(logger.isDebugEnabled()) logger.debug("ConsumersGroupInstancesInstanceOffsetsPutHandler constructed!");
@@ -31,7 +31,7 @@ public class ConsumersGroupInstancesInstanceOffsetsPutHandler implements LightHt
         String instance = exchange.getPathParameters().get("instance").getFirst();
         Map<String, Object> map = (Map)exchange.getAttachment(BodyHandler.REQUEST_BODY);
         ConsumerCommittedRequest request = Config.getInstance().getMapper().convertValue(map, ConsumerCommittedRequest.class);
-        if(logger.isDebugEnabled()) logger.debug("group = " + group + " instance = " + instance + " request = " + request);
+        if(logger.isDebugEnabled()) logger.debug("group = {} instance = {} request = {}", group, instance, request);
         ConsumerCommittedResponse response = ActiveConsumerStartupHook.kafkaConsumerManager.committed(group, instance, request);
         exchange.getResponseHeaders().put(Headers.CONTENT_TYPE, "application/json");
         exchange.setStatusCode(200);
