@@ -61,7 +61,6 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     private AtomicReference<Result<List<ConsumerRecord<Object, Object>>>> result = new AtomicReference<>();
     public List<AuditRecord> auditRecords = new ArrayList<>();
     SidecarProducer lightProducer;
-    ClientConnection connection;
 
     public DeadlettersQueueReactiveGetHandler() {
         if(config.isDeadLetterEnabled()) {
@@ -137,7 +136,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                 connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
             }
             // if we cannot borrow the token when the downstream API is not available, an exception will be thrown.
-            connection = (ClientConnection) connectionToken.getRawConnection();
+            ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
             while(index <20 && recordsCount ==0 ) {
                 returnedResult =readRecords(
                         exchange,
@@ -285,38 +284,35 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
 
         maxBytes = (maxBytes <= 0) ? Long.MAX_VALUE : maxBytes;
         try {
-            if (connection != null && connection.isOpen()) {
-                ReactiveConsumerStartupHook.kafkaConsumerManager.readRecords(
-                        group, instance, consumerStateType, timeout, maxBytes,
-                        new ConsumerReadCallback<Object, Object>() {
-                            @Override
-                            public void onCompletion(
-                                    List<ConsumerRecord<Object, Object>> records, FrameworkException e
-                            ) {
-                                if (e != null) {
-                                    logger.error("FrameworkException:", e);
-                                    Status status = new Status(UNEXPECTED_CONSUMER_READ_EXCEPTION, e.getMessage());
-                                    result.set(Failure.of(status));
-                                } else {
-                                    if (records.size() > 0) {
-                                        result.set(Success.of(records));
+            ReactiveConsumerStartupHook.kafkaConsumerManager.readRecords(
+                    group, instance, consumerStateType, timeout, maxBytes,
+                    new ConsumerReadCallback<Object, Object>() {
+                        @Override
+                        public void onCompletion(
+                                List<ConsumerRecord<Object, Object>> records, FrameworkException e
+                        ) {
+                            if (e != null) {
+                                logger.error("FrameworkException:", e);
+                                Status status = new Status(UNEXPECTED_CONSUMER_READ_EXCEPTION, e.getMessage());
+                                result.set(Failure.of(status));
+                            } else {
+                                if (records.size() > 0) {
+                                    result.set(Success.of(records));
 
-                                        if (logger.isDebugEnabled())
-                                            logger.debug("polled records size = " + records.size());
+                                    if (logger.isDebugEnabled())
+                                        logger.debug("polled records size = " + records.size());
 
-                                    }
-                                    else{
-                                        result.set(Success.of(null));
-                                    }
+                                }
+                                else{
+                                    result.set(Success.of(null));
                                 }
                             }
                         }
-                );
-                return result;
-            }
-        }
-        catch (Exception exc) {
-            logger.info("Could not borrow backend connection , please retry !!!", exc);
+                    }
+            );
+            return result;
+        } catch (Exception exc) {
+            logger.info("readRecords from Kafka exception, please retry!!!", exc);
         }
         return result;
 

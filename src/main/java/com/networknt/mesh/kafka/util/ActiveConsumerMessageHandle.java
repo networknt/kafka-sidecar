@@ -81,12 +81,11 @@ public class ActiveConsumerMessageHandle extends WriteAuditLog {
             else{
                 return currentOffset+1;
             }
+
             /**
-             * Starting to send the list of records to backend API
+             * Invoke Backend only if records were added to be sent to backend
              */
-
-
-            try {
+            if(!ObjectUtils.isEmpty(records) && !records.isEmpty()) {
                 if (connection == null || !connection.isOpen()) {
                     if (consumerConfig.getBackendApiHost().startsWith(Constants.HTTPS)) {
                         connectionToken = client.borrow(new URI(consumerConfig.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
@@ -95,18 +94,6 @@ public class ActiveConsumerMessageHandle extends WriteAuditLog {
                     }
                     connection = (ClientConnection) connectionToken.getRawConnection();
                 }
-            }catch(RuntimeException ie){
-                logger.info("Backend API connection not found, recover backend API container by restarting the pod ");
-                throw new RuntimeException("ActiveConsumerMessageHandle exception while connecting to backend API ...");
-
-            }finally {
-                client.restore(connectionToken);
-            }
-
-            /**
-             * Invoke Backend only if records were added to be sent to backend
-             */
-            if(!ObjectUtils.isEmpty(records) && !records.isEmpty()) {
 
                 final AtomicReference<ClientResponse> reference = new AtomicReference<>();
                 ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(consumerConfig.getBackendApiPath());
@@ -196,10 +183,9 @@ public class ActiveConsumerMessageHandle extends WriteAuditLog {
                 return currentOffset+1;
             }
 
-        }
-        catch(Exception e){
+        } catch(Exception e){
             throw new RuntimeException("ActiveConsumerMessageHandle exception while processing read message "+ e.getMessage());
-        }finally {
+        } finally {
             client.restore(connectionToken);
         }
 

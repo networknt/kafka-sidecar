@@ -9,20 +9,14 @@ import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.mesh.kafka.ProducerStartupHook;
-import com.networknt.mesh.kafka.SidecarAuditHelper;
 import com.networknt.mesh.kafka.WriteAuditLog;
-import com.networknt.server.Server;
 import com.networknt.status.Status;
-import com.networknt.utility.Constants;
 import io.undertow.server.HttpServerExchange;
-import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
