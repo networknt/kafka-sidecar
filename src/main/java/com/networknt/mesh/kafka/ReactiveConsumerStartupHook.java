@@ -1,11 +1,9 @@
 package com.networknt.mesh.kafka;
 
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
-import com.networknt.client.ClientConfig;
 import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
@@ -13,7 +11,6 @@ import com.networknt.exception.FrameworkException;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
-import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
@@ -25,13 +22,11 @@ import io.undertow.client.ClientRequest;
 import io.undertow.client.ClientResponse;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
@@ -53,7 +48,6 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     public static KafkaConsumerManager kafkaConsumerManager;
     public static boolean healthy = true;
     public static Http2Client client = Http2Client.getInstance();
-    public static ClientConnection connection;
     static private ExecutorService executor = newSingleThreadExecutor();
     public List<AuditRecord> auditRecords = new ArrayList<>();
     long timeoutMs = -1;
@@ -121,133 +115,135 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     ) {
         maxBytes = (maxBytes <= 0) ? Long.MAX_VALUE : maxBytes;
         Duration timeout = Duration.ofMillis(timeoutMs);
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
         try {
-            if (config.getBackendApiHost().startsWith(Constants.HTTPS)) {
-                connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
-            } else {
-                connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+            /**
+             * Scenario to handle when consumer goes away but container does not die.
+             */
+            if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                    null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                    StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
+                healthy = false;
+                logger.error("Consumer instance not found, marking health as false for group id: " , groupId);
             }
-            connection = (ClientConnection) connectionToken.getRawConnection();
-            final SimpleConnectionHolder holder = connectionToken.holder();
-            if (connection != null && connection.isOpen()) {
-                /**
-                 * Scenario to handle when consumer goes away but container does not die.
-                 */
-                if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
-                        null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
-                        StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                    healthy = false;
-                    logger.error("Consumer instance not found, marking health as false for group id: " , groupId);
-                }
-                kafkaConsumerManager.readRecords(
-                        groupId, instanceId, consumerStateType, timeout, maxBytes,
-                        new ConsumerReadCallback<ClientKeyT, ClientValueT>() {
-                            @Override
-                            public void onCompletion(
-                                    List<ConsumerRecord<ClientKeyT, ClientValueT>> records, FrameworkException e
-                            ) {
-                                if (e != null) {
-                                    logger.error("FrameworkException: ", e);
-                                    // set active consumer healthy to false in order to restart the container/pod.
-                                    healthy = false;
-                                } else {
-                                    // reset the healthy status to true if onCompletion returns data without exception for another try.
-                                    // this will ensure that k8s probe won't restart the pod by only one exception. It will only restart
-                                    // the pod when there are multiple health check failures in a row.
-                                    if (!healthy) healthy = true;
-                                    if (records.size() > 0) {
-                                        if (logger.isDebugEnabled())
-                                            logger.debug("polled records size = " + records.size());
-                                        final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-                                        try {
-                                            ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
-                                            request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
-                                            request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                                            if(config.isBackendConnectionReset()) {
-                                                request.getRequestHeaders().put(Headers.CONNECTION, "close");
-                                            }
-                                            request.getRequestHeaders().put(Headers.HOST, "localhost");
-                                            if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API of size {}", records.size());
-                                            final CountDownLatch latch = new CountDownLatch(1);
-                                            connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
-                                            latch.await(config.getInstanceTimeoutMs(), TimeUnit.MILLISECONDS);
-                                            int statusCode=0;
-                                            if(!ObjectUtils.isEmpty(reference) && !ObjectUtils.isEmpty(reference.get())){
-                                                statusCode = reference.get().getResponseCode();
-                                            }
-                                            else{
-                                                throw new TimeoutException("Rest Call to backend latch timeout");
-                                            }
-                                            String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
-                                            /**
-                                             * If consumer has exited by the time backend responds back, 
-                                             * then create another subscription.
-                                             * Although below piece of code looks redundant, leaving it here for a unfortunate racing situation between REST thread and consumer thread.
-                                             */
-                                            if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
-                                            null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
-                                            StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
-                                                logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
-                                                healthy=false;
-                                                readyForNextBatch = false;
-                                                return;
-                                            }
-                                            if (logger.isDebugEnabled())
-                                                logger.debug("statusCode = " + statusCode + " body  = " + body);
-                                            if (statusCode >= 400) {
-                                                // something happens on the backend and the data is not consumed correctly.
-                                                logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
-                                                kafkaConsumerManager.rollback(records, groupId, instanceId);
-                                                readyForNextBatch = true;
-                                            } else {
-                                                // The body will contains RecordProcessedResult for dead letter queue and audit.
-                                                // Write the dead letter queue if necessary.
-                                                if (logger.isInfoEnabled())
-                                                    logger.info("Got successful response from the backend API");
-                                                processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
-                                                /**
-                                                 * Always seek to the offset of last record in the processed batch for each topic and each partition
-                                                 */
+            kafkaConsumerManager.readRecords(
+                    groupId, instanceId, consumerStateType, timeout, maxBytes,
+                    new ConsumerReadCallback<ClientKeyT, ClientValueT>() {
+                        @Override
+                        public void onCompletion(
+                                List<ConsumerRecord<ClientKeyT, ClientValueT>> records, FrameworkException e
+                        ) {
+                            if (e != null) {
+                                logger.error("FrameworkException: ", e);
+                                // set active consumer healthy to false in order to restart the container/pod.
+                                healthy = false;
+                            } else {
+                                // reset the healthy status to true if onCompletion returns data without exception for another try.
+                                // this will ensure that k8s probe won't restart the pod by only one exception. It will only restart
+                                // the pod when there are multiple health check failures in a row.
+                                if (!healthy) healthy = true;
+                                if (records.size() > 0) {
+                                    if (logger.isDebugEnabled())
+                                        logger.debug("polled records size = " + records.size());
+                                    final AtomicReference<ClientResponse> reference = new AtomicReference<>();
+                                    SimpleConnectionHolder.ConnectionToken connectionToken = null;
+                                    SimpleConnectionHolder holder = null;
+                                    try {
+                                        if (config.getBackendApiHost().startsWith(Constants.HTTPS)) {
+                                            connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
+                                        } else {
+                                            connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, Http2Client.BUFFER_POOL, OptionMap.EMPTY);
+                                        }
+                                        ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
+                                        holder = connectionToken.holder();
 
-                                                List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= topicPartitionOffsetMetadataUtility(records);
-                                                ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
-                                                kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
-                                                    if(null !=e1){
-                                                        logger.error("Error committing offset, will force a restart ", e1);
-                                                        throw new RuntimeException(e1.getMessage());
-                                                    }
-                                                    else{
-                                                        topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
-                                                            logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
-                                                                    " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
-                                                        }));
-                                                    }
-                                                });
-
-                                                readyForNextBatch = true;
-                                            }
-                                        } catch (Exception exception) {
-                                            logger.error("Process response exception: ", exception);
-                                            // For spring boot backend, the connection created during the liveness and readiness won't work, need to close it to recreate.
-                                            holder.safeClose(System.currentTimeMillis());
+                                        ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
+                                        request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
+                                        request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
+                                        if(config.isBackendConnectionReset()) {
+                                            request.getRequestHeaders().put(Headers.CONNECTION, "close");
+                                        }
+                                        request.getRequestHeaders().put(Headers.HOST, "localhost");
+                                        if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API of size {}", records.size());
+                                        final CountDownLatch latch = new CountDownLatch(1);
+                                        connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
+                                        latch.await(config.getInstanceTimeoutMs(), TimeUnit.MILLISECONDS);
+                                        int statusCode=0;
+                                        if(!ObjectUtils.isEmpty(reference) && !ObjectUtils.isEmpty(reference.get())){
+                                            statusCode = reference.get().getResponseCode();
+                                        }
+                                        else{
+                                            throw new TimeoutException("Rest Call to backend latch timeout");
+                                        }
+                                        String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
+                                        /**
+                                         * If consumer has exited by the time backend responds back,
+                                         * then create another subscription.
+                                         * Although below piece of code looks redundant, leaving it here for a unfortunate racing situation between REST thread and consumer thread.
+                                         */
+                                        if(null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId) ||
+                                                null == kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId() ||
+                                                StringUtils.isEmpty(kafkaConsumerManager.getExistingConsumerInstance(groupId, instanceId).getId().getInstance())){
                                             logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
                                             healthy=false;
                                             readyForNextBatch = false;
                                             return;
                                         }
-                                    } else {
-                                        // Record size is zero. Do we need an extra period of sleep?
-                                        if (logger.isTraceEnabled())
-                                            logger.trace("Polled nothing from the Kafka cluster or connection to backend is null");
+                                        if (logger.isDebugEnabled())
+                                            logger.debug("statusCode = " + statusCode + " body  = " + body);
+                                        if (statusCode >= 400) {
+                                            // something happens on the backend and the data is not consumed correctly.
+                                            logger.error("Rollback due to error response from backend with status code = " + statusCode + " body = " + body);
+                                            kafkaConsumerManager.rollback(records, groupId, instanceId);
+                                            readyForNextBatch = true;
+                                        } else {
+                                            // The body will contains RecordProcessedResult for dead letter queue and audit.
+                                            // Write the dead letter queue if necessary.
+                                            if (logger.isInfoEnabled())
+                                                logger.info("Got successful response from the backend API");
+                                            processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
+                                            /**
+                                             * Always seek to the offset of last record in the processed batch for each topic and each partition
+                                             */
 
-                                        readyForNextBatch = true;
+                                            List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= topicPartitionOffsetMetadataUtility(records);
+                                            ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
+                                            kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
+                                                if(null !=e1){
+                                                    logger.error("Error committing offset, will force a restart ", e1);
+                                                    throw new RuntimeException(e1.getMessage());
+                                                }
+                                                else{
+                                                    topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
+                                                        logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
+                                                                " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
+                                                    }));
+                                                }
+                                            });
+
+                                            readyForNextBatch = true;
+                                        }
+                                    } catch (Exception exception) {
+                                        logger.error("Process response exception: ", exception);
+                                        // For spring boot backend, the connection created during the liveness and readiness won't work, need to close it to recreate.
+                                        if(holder != null) holder.safeClose(System.currentTimeMillis());
+                                        logger.info("Marking health status false as consumer had exited , increase instance time out MS or preferably reduce batch size");
+                                        healthy=false;
+                                        readyForNextBatch = false;
+                                        return;
+                                    } finally {
+                                        client.restore(connectionToken);
                                     }
+                                } else {
+                                    // Record size is zero. Do we need an extra period of sleep?
+                                    if (logger.isTraceEnabled())
+                                        logger.trace("Polled nothing from the Kafka cluster or connection to backend is null");
+
+                                    readyForNextBatch = true;
                                 }
                             }
                         }
-                );
-            }
+                    }
+            );
         } catch (Exception exc) {
             logger.info("Could not borrow backend connection , will retry !!!");
             try {
@@ -257,8 +253,6 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                 e.printStackTrace();
             }
             readyForNextBatch = true;
-        }finally {
-            client.restore(connectionToken);
         }
     }
 
