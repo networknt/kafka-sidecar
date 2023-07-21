@@ -108,7 +108,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
      *
      * @return result String of OK or ERROR.
      */
-    private String backendHealth() {
+    public static String backendHealth() {
         String result = HEALTH_RESULT_OK;
         long start = System.currentTimeMillis();
         SimpleConnectionHolder.ConnectionToken connectionToken = null;

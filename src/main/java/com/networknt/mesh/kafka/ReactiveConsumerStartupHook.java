@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.mesh.kafka.handler.SidecarHealthHandler;
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.kafka.producer.NativeLightProducer;
@@ -70,6 +71,16 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
             } else {
                 logger.error("ProducerStartupHook is not configured and it is needed if DLQ is enabled");
                 throw new RuntimeException("ProducerStartupHook is not loaded!");
+            }
+        }
+        // The backend API might not be started as fast as the sidecar, we need to keep send a health check request to the backend to ensure it is up.
+        while(true) {
+            String result = SidecarHealthHandler.backendHealth();
+            if(result.equals(SidecarHealthHandler.HEALTH_RESULT_OK)) break;
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
             }
         }
         // get or create the KafkaConsumerManager
