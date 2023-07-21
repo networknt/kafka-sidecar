@@ -77,6 +77,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         while(true) {
             String result = SidecarHealthHandler.backendHealth();
             if(result.equals(SidecarHealthHandler.HEALTH_RESULT_OK)) break;
+            logger.info("Could not connect to the backend API, wait for 1 second and try again.");
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
