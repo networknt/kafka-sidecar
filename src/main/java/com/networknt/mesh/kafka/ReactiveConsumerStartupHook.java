@@ -248,23 +248,17 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                 } else {
                                     // Record size is zero. Do we need an extra period of sleep?
                                     if (logger.isTraceEnabled())
-                                        logger.trace("Polled nothing from the Kafka cluster or connection to backend is null");
-
-                                    readyForNextBatch = true;
+                                        logger.trace("Polled nothing from the Kafka cluster");
+                                    readyForNextBatch = false;
                                 }
                             }
                         }
                     }
             );
         } catch (Exception exc) {
-            logger.info("Could not borrow backend connection , will retry !!!");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-            }
-            readyForNextBatch = true;
+            logger.info("Exception while reading messages", exc);
+            healthy = false;
+            readyForNextBatch = false;
         }
     }
 
