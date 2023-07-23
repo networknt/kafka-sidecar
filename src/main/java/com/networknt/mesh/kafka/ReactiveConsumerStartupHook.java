@@ -249,7 +249,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     // Record size is zero. Do we need an extra period of sleep?
                                     if (logger.isTraceEnabled())
                                         logger.trace("Polled nothing from the Kafka cluster");
-                                    readyForNextBatch = false;
+                                    readyForNextBatch = true;
                                 }
                             }
                         }
