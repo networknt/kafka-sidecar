@@ -100,6 +100,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     class ConsumerTask implements Runnable {
         @Override
         public void run() {
+            if(logger.isDebugEnabled()) logger.debug("done is {} and healthy is {}", done, healthy);
             while (!done) {
                 readyForNextBatch = false;
                 readRecords(
@@ -177,7 +178,8 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                         request.getRequestHeaders().put(Headers.HOST, "localhost");
                                         if (logger.isInfoEnabled()) logger.info("Send a batch to the backend API of size {}", records.size());
                                         final CountDownLatch latch = new CountDownLatch(1);
-                                        connection.sendRequest(request, client.createClientCallback(reference, latch, JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()))));
+                                        String message = JsonMapper.toJson(records.stream().map(toJsonWrapper).collect(Collectors.toList()));
+                                        connection.sendRequest(request, client.createClientCallback(reference, latch, message));
                                         latch.await(config.getInstanceTimeoutMs(), TimeUnit.MILLISECONDS);
                                         int statusCode=0;
                                         if(!ObjectUtils.isEmpty(reference) && !ObjectUtils.isEmpty(reference.get())){

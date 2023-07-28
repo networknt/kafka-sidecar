@@ -124,6 +124,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
             try {
                 ClientRequest request = new ClientRequest().setMethod(Methods.GET).setPath(config.getDownstreamPath());
                 request.getRequestHeaders().put(Headers.HOST, "localhost");
+                if(logger.isDebugEnabled()) logger.debug("Header information printed in HealthCheck {}", request.getRequestHeaders().toString());
                 connection.sendRequest(request, ReactiveConsumerStartupHook.client.createClientCallback(reference, latch));
                 latch.await(config.getTimeout(), TimeUnit.MILLISECONDS);
                 int statusCode = reference.get().getResponseCode();
