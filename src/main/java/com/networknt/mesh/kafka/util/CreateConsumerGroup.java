@@ -35,7 +35,7 @@ public class CreateConsumerGroup {
                 map.put(VALUE_FORMAT, config.getValueFormat());
             }
             CreateConsumerInstanceRequest request = Config.getInstance().getMapper().convertValue(map, CreateConsumerInstanceRequest.class);
-            if(logger.isDebugEnabled()) logger.debug("group = {} request = {}", listenerGroupName, request);
+            if(logger.isDebugEnabled()) logger.debug("group = {} request = {} config = {}", listenerGroupName, request, Config.getInstance().getMapper().writeValueAsString(config));
             this.instanceId = ActiveConsumerStartupHook.kafkaConsumerManager.createConsumer(listenerGroupName, request.toConsumerInstanceConfig());
 
             if(!StringUtils.isEmpty(instanceId)){

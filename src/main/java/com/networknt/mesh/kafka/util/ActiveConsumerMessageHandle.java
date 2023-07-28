@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
 
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
