@@ -15,6 +15,7 @@ import com.networknt.kafka.producer.KafkaHeadersCarrier;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
 import com.networknt.utility.StringUtils;
@@ -133,7 +134,7 @@ public class TopicReplayPostHandler extends WriteAuditLog implements LightHttpHa
                      * After producing into controller topic, we will write audit for it.
                      */
                     Headers headers = populateHeaders(exchange, producerConfig, topic);
-                    CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(streamsConfig.getDeadLetterControllerTopic(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+                    CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(streamsConfig.getDeadLetterControllerTopic(), ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                     responseFuture.whenCompleteAsync((response, throwable) -> {
                         // write the audit log here.
                         synchronized (auditRecords) {

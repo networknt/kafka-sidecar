@@ -8,6 +8,7 @@ import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.utility.Constants;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
@@ -33,7 +34,7 @@ public class WriteAuditLog {
     protected AuditRecord auditFromRecordProcessedResult(RecordProcessedResult result, AuditRecord.AuditType auditType) {
         AuditRecord auditRecord = new AuditRecord();
         auditRecord.setId(UUID.randomUUID().toString());
-        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
+        auditRecord.setServiceId(ServerConfig.getInstance().getServiceId());
         auditRecord.setAuditType(auditType);
         auditRecord.setTopic(result.getRecord().getTopic());
         auditRecord.setPartition(result.getRecord().getPartition());
@@ -115,7 +116,7 @@ public class WriteAuditLog {
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
                         org.apache.kafka.common.header.Headers headers = kafkaConsumerManager.populateHeaders(result);
-                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
                             long startAudit = System.currentTimeMillis();
@@ -140,7 +141,7 @@ public class WriteAuditLog {
                         auditRecord.setTopic(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt());
                         auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
                         auditRecord.setAuditStatus(AuditRecord.AuditStatus.FAILURE);
-                        auditRecord.setServiceId(Server.getServerConfig().getServiceId());
+                        auditRecord.setServiceId(ServerConfig.getInstance().getServiceId());
                         auditRecord.setStacktrace(e.getMessage());
                         auditRecord.setOffset(0);
                         auditRecord.setPartition(0);

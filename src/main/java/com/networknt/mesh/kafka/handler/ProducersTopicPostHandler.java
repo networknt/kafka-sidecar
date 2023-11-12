@@ -15,6 +15,7 @@ import com.networknt.kafka.producer.*;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.status.Status;
 import com.networknt.utility.Constants;
@@ -107,7 +108,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                 produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
             }
             Headers headers = populateHeaders(exchange, config, topic);
-            CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(topic, Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+            CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(topic, ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
             responseFuture.whenCompleteAsync((response, throwable) -> {
                 // write the audit log here.
                 long startAudit = System.currentTimeMillis();

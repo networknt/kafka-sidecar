@@ -38,7 +38,7 @@ public class KsqldbActiveConsumerStartupHook implements StartupHookProvider {
         List<String> masks = new ArrayList<>();
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
-        ModuleRegistry.registerModule(KsqldbActiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaKsqldbConfig.CONFIG_NAME), masks);
+        ModuleRegistry.registerModule(KafkaKsqldbConfig.CONFIG_NAME, KsqldbActiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaKsqldbConfig.CONFIG_NAME), masks);
 
         logger.debug("KsqldbActiveConsumerStartupHook ends");
     }

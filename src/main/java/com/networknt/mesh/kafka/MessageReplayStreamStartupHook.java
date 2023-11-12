@@ -3,6 +3,7 @@ package com.networknt.mesh.kafka;
 import com.networknt.mesh.kafka.streams.MessageReplayStreams;
 import com.networknt.mesh.kafka.util.StreamsFactory;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.NetUtils;
 import org.slf4j.Logger;
@@ -17,7 +18,7 @@ public class MessageReplayStreamStartupHook implements StartupHookProvider {
 
         logger.info("MessageReplayStreamStartupHook Starting !!! ");
 
-        int port = Server.getServerConfig().getHttpsPort();
+        int port = ServerConfig.getInstance().getHttpsPort();
         String ip = NetUtils.getLocalAddressByDatagram();
         logger.info("ip = {} port = {}", ip, port);
 
