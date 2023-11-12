@@ -10,6 +10,7 @@ import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.utility.Constants;
 import com.networknt.utility.ObjectUtils;
 import org.apache.kafka.common.header.internals.RecordHeaders;
@@ -112,7 +113,7 @@ public class ActiveConsumerStreamsAppMessageHandle extends WriteAuditLog {
             if(!ObjectUtils.isEmpty(produceRequest) && !produceRequest.getRecords().isEmpty()) {
                 if (logger.isInfoEnabled()) logger.info("Send a batch to the destination topic API, size {}", produceRequest.getRecords().size());
                 try {
-                    CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(topicReplayMetadata.getDestinationTopic(), Server.getServerConfig().getServiceId(), Optional.empty(), produceRequest, new RecordHeaders(), auditRecords);
+                    CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(topicReplayMetadata.getDestinationTopic(), ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, new RecordHeaders(), auditRecords);
                     responseFuture.whenCompleteAsync((response, throwable) -> {
                         // write the audit log here.
                         long startAudit = System.currentTimeMillis();

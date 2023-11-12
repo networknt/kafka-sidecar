@@ -4,6 +4,7 @@ import com.networknt.config.JsonMapper;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.util.AuditRecordCreation;
 import com.networknt.server.Server;
+import com.networknt.server.ServerConfig;
 import com.networknt.utility.ObjectUtils;
 import org.apache.kafka.streams.processor.api.ProcessorContext;
 import org.apache.kafka.streams.processor.api.Record;
@@ -23,7 +24,7 @@ public class AuditRecordUtil {
                                           String reasonText, AuditRecord.AuditType auditType, AuditRecord.AuditStatus auditStatus) {
 
         AuditRecord createdRecord = AuditRecordCreation.createAuditRecord(UUID.randomUUID().toString(),
-                Server.getServerConfig().getServiceId(),
+                ServerConfig.getInstance().getServiceId(),
                 auditType,
                 recordMetadata.topic(),
                 recordMetadata.partition(),

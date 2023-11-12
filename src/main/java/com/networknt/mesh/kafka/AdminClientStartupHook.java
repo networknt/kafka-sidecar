@@ -26,7 +26,7 @@ public class AdminClientStartupHook implements StartupHookProvider {
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
         masks.add("schema.registry.ssl.truststore.password");
-        ModuleRegistry.registerModule(AdminClientStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaAdminConfig.CONFIG_NAME), masks);
+        ModuleRegistry.registerModule(KafkaAdminConfig.CONFIG_NAME, AdminClientStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaAdminConfig.CONFIG_NAME), masks);
         logger.info("AdminClientStartupHook ends");
     }
 }
