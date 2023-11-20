@@ -80,9 +80,9 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
             lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
             config = lightProducer.config;
             if (config.isInjectCallerId()) {
-                Map<String, Object> serverConfig = Config.getInstance().getJsonMapConfigNoCache("server");
+                ServerConfig serverConfig = ServerConfig.getInstance();
                 if (serverConfig != null) {
-                    callerId = (String) serverConfig.get("serviceId");
+                    callerId = serverConfig.getServiceId();
                 }
             }
         }
