@@ -39,8 +39,8 @@ public class TopicReplayPostHandler extends WriteAuditLog implements LightHttpHa
 
     private static final Logger logger = LoggerFactory.getLogger(TopicReplayPostHandler.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
-    public static KafkaStreamsConfig streamsConfig = (KafkaStreamsConfig) Config.getInstance().getJsonObjectConfig(KafkaStreamsConfig.CONFIG_NAME, KafkaConsumerConfig.class);
-    public static KafkaProducerConfig producerConfig = (KafkaProducerConfig) Config.getInstance().getJsonObjectConfig(KafkaProducerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    public static KafkaStreamsConfig streamsConfig = (KafkaStreamsConfig) Config.getInstance().getJsonObjectConfig(KafkaStreamsConfig.CONFIG_NAME, KafkaStreamsConfig.class);
+    public static KafkaProducerConfig producerConfig = (KafkaProducerConfig) Config.getInstance().getJsonObjectConfig(KafkaProducerConfig.CONFIG_NAME, KafkaProducerConfig.class);
     private static String STATUS_ACCEPTED = "SUC10202";
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
     private static String TOPICREPLAY_METADATA_ERROR = "ERR12218";
