@@ -12,6 +12,7 @@ import com.networknt.exception.FrameworkException;
 import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
+import com.networknt.server.Server;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
@@ -55,8 +56,8 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     long maxBytes = -1;
     String instanceId;
     String groupId;
-    // An indicator that will break the consumer loop so that the consume can be closed. It is set
-    // by the ReactiveConsumerShutdownHook to do the clean up.
+    // An indicator that will break the consumer loop so that the consumer can be closed. It is set
+    // by the ReactiveConsumerShutdownHook to do the cleanup.
     public static boolean done = false;
     // send the next batch only when the response for the previous batch is returned.
     public static boolean readyForNextBatch = false;
@@ -71,17 +72,6 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
             } else {
                 logger.error("ProducerStartupHook is not configured and it is needed if DLQ is enabled");
                 throw new RuntimeException("ProducerStartupHook is not loaded!");
-            }
-        }
-        // The backend API might not be started as fast as the sidecar, we need to keep send a health check request to the backend to ensure it is up.
-        while(true) {
-            String result = SidecarHealthHandler.backendHealth();
-            if(result.equals(SidecarHealthHandler.HEALTH_RESULT_OK)) break;
-            logger.info("Could not connect to the backend API, wait for 1 second and try again.");
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
             }
         }
         // get or create the KafkaConsumerManager
@@ -100,7 +90,25 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     class ConsumerTask implements Runnable {
         @Override
         public void run() {
-            if(logger.isDebugEnabled()) logger.debug("done is {} and healthy is {}", done, healthy);
+            if(logger.isDebugEnabled()) logger.debug("done is {} and healthy is {} server ready is {}", done, healthy, Server.ready);
+            // The backend API might not be started as fast as the sidecar, we need to keep send a health check request to the backend to ensure it is up.
+            boolean backendHealthy = false;
+            while(true) {
+                if(!backendHealthy) {
+                    // we only want to run the backend health check until it is healthy.
+                    String result = SidecarHealthHandler.backendHealth();
+                    if(result.equals(SidecarHealthHandler.HEALTH_RESULT_OK)) {
+                        backendHealthy = true;
+                    }
+                }
+                if(backendHealthy && Server.ready) break;
+                logger.info("Could not connect to the backend API or Server is not ready, wait for 1 second and try again.");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
             while (!done) {
                 readyForNextBatch = false;
                 readRecords(
