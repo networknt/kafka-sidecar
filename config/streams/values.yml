@@ -1,3 +1,6 @@
+# server.yml
+server.serviceId: com.networknt.stream-word-count-1.0.0
+
 # producer format configuration
 kafka-producer.bootstrap.servers: broker:29092
 kafka-producer.schema.registry.url: http://schema-registry:8081
@@ -25,7 +28,7 @@ kafka-ksqldb.ksqldbPort: 8088
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
-  # - com.networknt.mesh.kafka.ProducerStartupHook
+  - com.networknt.mesh.kafka.ProducerStartupHook
   - com.networknt.kafka.WordCountStartupHook
   # - com.networknt.mesh.kafka.ActiveConsumerStartupHook
   # - com.networknt.mesh.kafka.KsqldbReactiveConsumerStartupHook
@@ -33,7 +36,7 @@ service.com.networknt.server.StartupHookProvider:
   # - com.networknt.mesh.kafka.ReactiveConsumerStartupHook
   # - com.networknt.mesh.kafka.AdminClientStartupHook
 service.com.networknt.server.ShutdownHookProvider:
-  # - com.networknt.mesh.kafka.ProducerShutdownHook
+  - com.networknt.mesh.kafka.ProducerShutdownHook
   - com.networknt.kafka.WordCountShutdownHook
   # - com.networknt.mesh.kafka.ActiveConsumerShutdownHook
   # - com.networknt.mesh.kafka.KsqldbReactiveConsumerShutdownHook
