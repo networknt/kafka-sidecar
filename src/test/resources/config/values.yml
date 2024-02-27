@@ -22,3 +22,19 @@ service.com.networknt.server.ShutdownHookProvider:
   - com.networknt.mesh.kafka.ReactiveConsumerShutdownHook
   # - com.networknt.mesh.kafka.AdminClientShutdownHook
   - com.networknt.mesh.kafka.KsqldbActiveConsumerShutdownHook
+
+# handler.yml
+handler.additionalHandlers:
+  - com.networknt.mesh.kafka.InteractiveQueryGetHandler
+handler.additionalChains:
+  interactive:
+    - exception
+    - metrics
+    - traceability
+    - correlation
+handler.additionalPaths:
+  - path: '/interactive/query'
+    method: 'GET'
+    exec:
+      - interactive
+      - com.networknt.mesh.kafka.handler.InteractiveQueryGetHandler
