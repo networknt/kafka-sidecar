@@ -1,5 +1,3 @@
-
-
 # Handler middleware chain configuration
 #----------------------------------------
 enabled: true
@@ -12,6 +10,9 @@ auditOnError: ${handler.auditOnError:false}
 # set the StackTrace in the AUDIT_INFO, for auditing purposes
 # default, if not set:false
 auditStackTrace: ${handler.auditStackTrace:false}
+
+# Base Path of the API endpoints
+basePath: ${handler.basePath:/}
 
 #------------------------------------------------------------------------------
 # Support individual handler chains for each separate endpoint. It allows framework
@@ -47,14 +48,11 @@ handlers:
   - com.networknt.correlation.CorrelationHandler@correlation
   - com.networknt.openapi.OpenApiHandler@specification
   - com.networknt.openapi.JwtVerifyHandler@security
-  - com.networknt.body.BodyHandler@body 
+  - com.networknt.body.BodyHandler@body
   - com.networknt.audit.AuditHandler@audit
-  # DumpHandler is to dump detail request/response info to log, useful for troubleshooting but not suggested to use in production due to it may lower the performance
-  # - com.networknt.dump.DumpHandler@dump 
   - com.networknt.sanitizer.SanitizerHandler@sanitizer
   - com.networknt.openapi.ValidatorHandler@validator
   # Customer business domain specific cross-cutting concerns handlers
-  # - com.example.validator.CustomizedValidator@custvalidator
   # Framework endpoint handlers
   - com.networknt.mesh.kafka.handler.SidecarHealthHandler@health
   - com.networknt.info.ServerInfoGetHandler@info
@@ -97,19 +95,21 @@ handlers:
   - com.networknt.mesh.kafka.handler.DeadlettersQueueActivePostHandler
   - com.networknt.mesh.kafka.handler.ConsumersActiveAuditPostHandler
 
+additionalHandlers: ${handler.additionalHandlers:}
+
 chains:
   default:
     - exception
     - metrics
     - traceability
-    - correlation 
+    - correlation
     - specification
     - security
-    - body 
+    - body
     - audit
-    # - dump
     - sanitizer
     - validator
+
   admin:
     - exception
     - correlation
@@ -117,6 +117,8 @@ chains:
     - security
     - body
     - validator
+
+additionalChains: ${handler.additionalChains:}
 
 paths:
   - path: '/producers/{topic}'
@@ -265,7 +267,7 @@ paths:
   - path: '/adm/modules'
     method: 'post'
     exec:
-      - body
+      - admin
       - configReload
   - path: '/adm/shutdown'
     method: 'delete'
@@ -296,3 +298,5 @@ paths:
     method: 'get'
     exec:
       - favicon
+
+additionalPaths: ${handler.additionalPaths:}
