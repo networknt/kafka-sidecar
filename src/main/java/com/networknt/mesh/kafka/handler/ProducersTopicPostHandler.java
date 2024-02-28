@@ -1,54 +1,27 @@
 package com.networknt.mesh.kafka.handler;
 
-import com.fasterxml.jackson.databind.node.NullNode;
-import com.google.protobuf.ByteString;
 import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
-import com.networknt.exception.FrameworkException;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.httpstring.AttachmentConstants;
-import com.networknt.httpstring.HttpStringConstants;
 import com.networknt.kafka.common.KafkaProducerConfig;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.*;
 import com.networknt.mesh.kafka.ProducerStartupHook;
 import com.networknt.mesh.kafka.WriteAuditLog;
-import com.networknt.server.Server;
 import com.networknt.server.ServerConfig;
 import com.networknt.service.SingletonServiceFactory;
-import com.networknt.status.Status;
 import com.networknt.utility.Constants;
 import com.networknt.kafka.entity.EmbeddedFormat;
-import com.networknt.utility.Util;
-import io.confluent.kafka.schemaregistry.avro.AvroSchemaProvider;
-import io.confluent.kafka.schemaregistry.client.CachedSchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
-import io.confluent.kafka.schemaregistry.client.rest.RestService;
-import io.confluent.kafka.schemaregistry.json.JsonSchemaProvider;
-import io.confluent.kafka.schemaregistry.protobuf.ProtobufSchemaProvider;
-import io.confluent.kafka.serializers.subject.TopicNameStrategy;
-import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
-import io.opentracing.tag.Tags;
 import io.undertow.server.HttpServerExchange;
-import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.KafkaException;
-import org.apache.kafka.common.errors.AuthenticationException;
-import org.apache.kafka.common.errors.AuthorizationException;
-import org.apache.kafka.common.errors.RetriableException;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import static java.util.Collections.singletonList;
 
 /**
  * The producer endpoint that can receive request from the backend service messages and push them
@@ -139,6 +112,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
         if(token != null) {
             headers.add(Constants.AUTHORIZATION_STRING, token.getBytes(StandardCharsets.UTF_8));
         }
+        /*
         if(config.isInjectOpenTracing()) {
             // maybe we should move this to the ProduceRecord in the future like the correlationId and traceabilityId.
             Tracer tracer = exchange.getAttachment(AttachmentConstants.EXCHANGE_TRACER);
@@ -148,7 +122,7 @@ public class ProducersTopicPostHandler extends WriteAuditLog implements LightHtt
                 tracer.inject(tracer.activeSpan().context(), Format.Builtin.TEXT_MAP, new KafkaHeadersCarrier(headers));
             }
         }
-
+        */
         // remove the correlationId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
         // remove the traceabilityId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
 
