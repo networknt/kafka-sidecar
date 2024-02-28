@@ -11,17 +11,12 @@ import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.common.KafkaProducerConfig;
 import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.entity.*;
-import com.networknt.kafka.producer.KafkaHeadersCarrier;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
-import com.networknt.server.Server;
 import com.networknt.server.ServerConfig;
 import com.networknt.service.SingletonServiceFactory;
 import com.networknt.utility.Constants;
 import com.networknt.utility.StringUtils;
-import io.opentracing.Tracer;
-import io.opentracing.propagation.Format;
-import io.opentracing.tag.Tags;
 import io.undertow.server.HttpServerExchange;
 import org.apache.kafka.common.header.Headers;
 import org.apache.kafka.common.header.internals.RecordHeaders;
@@ -175,6 +170,7 @@ public class TopicReplayPostHandler extends WriteAuditLog implements LightHttpHa
         if(token != null) {
             headers.add(Constants.AUTHORIZATION_STRING, token.getBytes(StandardCharsets.UTF_8));
         }
+        /*
         if(config.isInjectOpenTracing()) {
             // maybe we should move this to the ProduceRecord in the future like the correlationId and traceabilityId.
             Tracer tracer = exchange.getAttachment(AttachmentConstants.EXCHANGE_TRACER);
@@ -184,7 +180,7 @@ public class TopicReplayPostHandler extends WriteAuditLog implements LightHttpHa
                 tracer.inject(tracer.activeSpan().context(), Format.Builtin.TEXT_MAP, new KafkaHeadersCarrier(headers));
             }
         }
-
+        */
         // remove the correlationId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
         // remove the traceabilityId from the HTTP header and moved it to the ProduceRecord as it is per record attribute.
 

@@ -19,5 +19,5 @@ public class AuditProducerShutdownHook implements ShutdownHookProvider {
         }
         logger.info("AuditProducerShutdownHook ends");
     }
-    
+
 }

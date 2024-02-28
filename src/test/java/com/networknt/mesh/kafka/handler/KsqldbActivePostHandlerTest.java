@@ -70,12 +70,12 @@ public class KsqldbActivePostHandlerTest {
             ClientConnection connection = (ClientConnection) connectionToken.getRawConnection();
 
             ClientRequest request = new ClientRequest().setPath(requestUri).setMethod(Methods.POST);
-            
+
             request.getRequestHeaders().put(Headers.CONTENT_TYPE, JSON_MEDIA_TYPE);
             request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-            //customized header parameters 
+            //customized header parameters
             connection.sendRequest(request, client.createClientCallback(reference, latch, requestBody));
-            
+
             latch.await();
         } catch (Exception e) {
             logger.error("Exception: ", e);
@@ -97,4 +97,3 @@ public class KsqldbActivePostHandlerTest {
         Assert.assertNull(status);
     }
 }
-

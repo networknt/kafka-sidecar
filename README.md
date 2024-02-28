@@ -12,11 +12,11 @@ A fast and light-weight reverse proxy with embedded gateway to wrap third party 
 
 ## Why Reverse Proxy
 
-All the services developed on top of light-4j frameworks support [client side service discovery](http://microservices.io/patterns/client-side-discovery.html), 
+All the services developed on top of light-4j frameworks support [client side service discovery](http://microservices.io/patterns/client-side-discovery.html),
 load balance and cluster natively. So there is no need to put a reverse proxy instance in front of our
 services like other API frameworks that support only [server side service discovery](http://microservices.io/patterns/server-side-discovery.html).
 
-Also, light services embed a distributed gateway to address all the cross-cutting concerns in the 
+Also, light services embed a distributed gateway to address all the cross-cutting concerns in the
 request/response chain and work with the ecosystem that consists:
 
 * [light-oauth2](https://doc.networknt.com/service/oauth/) for security
@@ -31,14 +31,14 @@ request/response chain and work with the ecosystem that consists:
 Currently, we only support Java language; however, we are planning to support Nodejs and Go in the future
 if there are enough customer demands. For some of our customers, they have some existing RESTful APIs that
 built on top of other Java frameworks or other languages. We've been asked frequently on how to interact
-with these services to/from light services and how to enable security, metrics, logging, discovery, 
-validation, sanitization etc. on the existing services. 
+with these services to/from light services and how to enable security, metrics, logging, discovery,
+validation, sanitization etc. on the existing services.
 
-Our answer is to deploy a reverse proxy built on top of light-4j framework that wraps the existing service. 
+Our answer is to deploy a reverse proxy built on top of light-4j framework that wraps the existing service.
 
 The reverse proxy has the following features:
 
-* High throughput, low latency and small footprint. 
+* High throughput, low latency and small footprint.
 * Integrate light-oauth2 to protect un-secured services
 * Built-in load balancer
 * Can be started with Docker or standalone
@@ -58,7 +58,7 @@ Click [here](https://doc.networknt.com/tutorial/kafka-sidecar/local-dev/#reactiv
 
 If the evnironment is windows OS, we can start confluent kafka docker-compose for testing:
 
-From command line, create a docker network first which will indicate kafka and sidecar running in same network. 
+From command line, create a docker network first which will indicate kafka and sidecar running in same network.
 
 ```
 cd kafka-sidecar
@@ -159,7 +159,7 @@ value schema:
 There are two options for starting kafka sidecar and backend api:
 
 - by standalone APIs
-  
+
 - by docker-compose
 ----
 #### By docker-compose
@@ -255,12 +255,12 @@ The Reactive Consumer will send those message to DLQ if deadLetterEnabled.
 
 ### Using the sidecar endpoint to producer error message to DLQ:
 
-- endpoint: 
+- endpoint:
 
   /consumers/deadLetter/active
 
 - method
-  
+
    POST
 
 Sample request payload:
@@ -305,19 +305,19 @@ Sample request payload:
 
 ### Active Consumer Workflow:
 
-Kafka sidecar provide the end-to-end workflow for actively consumer the records from kafka topic(s).  
+Kafka sidecar provide the end-to-end workflow for actively consumer the records from kafka topic(s).
 
 When user try  following workflow to consumer records:
 
 - enable ActiveConsumerStartupHook on service.yml (or values.yml)
-  
+
    This will create kafka consumer manager for active consumer on kafka sidecar server startup
 
 
 -  create consumer group
-   
+
     endpoint: /consumers/{group}
- 
+
     method: POST
 
 
@@ -342,16 +342,15 @@ When user try  following workflow to consumer records:
   method: POST
 
 
-- add the records process detail to audit 
+- add the records process detail to audit
 
   endpoint: /consumers/active/audit
 
   method: POST
 
-### To learn how to use this proxy, pleases refer to 
+### To learn how to use this proxy, pleases refer to
 
 * [Getting Started](https://doc.networknt.com/getting-started/light-proxy/) to learn core concepts
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
 * [Configuration](https://doc.networknt.com/service/proxy/configuration/) for different configurations based on your situations
 * [Artifact](https://doc.networknt.com/service/proxy/artifact/) to guide customer to choose the right artifact to deploy light-proxy.
-

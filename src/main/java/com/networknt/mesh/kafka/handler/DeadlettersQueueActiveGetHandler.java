@@ -37,7 +37,7 @@ public class DeadlettersQueueActiveGetHandler implements LightHttpHandler {
         if(logger.isDebugEnabled()) logger.debug("ReplayDeadLetterTopicGetHandler constructed!");
     }
 
-    
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String groupId = exchange.getQueryParameters().get("group")==null? config.getGroupId() : exchange.getQueryParameters().get("group").getFirst();

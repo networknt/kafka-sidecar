@@ -205,14 +205,14 @@ Sample request body:
             "key": "2",
             "value": {
                 "userId": "2222",
-                 "firstName": "test2"                
+                 "firstName": "test2"
             }
         },
         {
             "key": "3",
             "value": {
                 "userId": "3333",
-                 "firstName": "test3"                       
+                 "firstName": "test3"
             }
         }
     ]
@@ -222,8 +222,8 @@ Sample request body:
 - Create KTable based on the topic created above:
 
 ```json
-CREATE TABLE USERS 
-   (ID STRING PRIMARY KEY, USERID STRING, FIRSTNAME STRING, LASTNAME STRING, COUNTRY STRING) 
+CREATE TABLE USERS
+   (ID STRING PRIMARY KEY, USERID STRING, FIRSTNAME STRING, LASTNAME STRING, COUNTRY STRING)
     WITH (KAFKA_TOPIC='test', KEY_FORMAT='KAFKA', VALUE_FORMAT='JSON_SR');
 ```
 
@@ -240,7 +240,7 @@ CREATE TABLE USERS
 ```text
 curl --location --request POST 'http://localhost:8442/ksqldb/active' \
 --header 'Content-Type: application/json' \
---data-raw ' 
+--data-raw '
 {
     "offset": "earliest",
     "deserializationError": false,

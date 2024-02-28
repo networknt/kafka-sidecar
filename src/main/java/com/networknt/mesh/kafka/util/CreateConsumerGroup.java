@@ -49,7 +49,7 @@ public class CreateConsumerGroup {
     }
 
     /**
-     * 
+     *
      * @return instance Id Utility
      */
     public String getInstanceId(){
@@ -57,7 +57,7 @@ public class CreateConsumerGroup {
     }
 
     /**
-     * 
+     *
      * @param instanceId A string instance Id
      */
     public void setInstanceId(String instanceId){

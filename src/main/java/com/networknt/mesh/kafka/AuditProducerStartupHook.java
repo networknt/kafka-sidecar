@@ -20,5 +20,5 @@ public class AuditProducerStartupHook implements StartupHookProvider {
         auditProducer = lightProducer.getProducer();
         logger.info("AuditProducerStartupHook ends");
     }
-    
+
 }
