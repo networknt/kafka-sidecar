@@ -29,7 +29,7 @@ public class ConsumersGroupPostHandler implements LightHttpHandler {
         if(logger.isDebugEnabled()) logger.debug("ConsumersGroupPostHandler constructed!");
     }
 
-    
+
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
         String group = exchange.getPathParameters().get("group").getFirst();
