@@ -8,8 +8,7 @@ client.enableHttp2: true
 server.serviceId: com.networknt.kafka-sidecar-1.0.0
 
 # security.yml
-# Enable JWT verification flag.
-openapi-security.enableVerifyJwt: true
+security.enableVerifyJwt: true
 
 # Service Startup and Shutdown Hooks
 service.com.networknt.server.StartupHookProvider:
