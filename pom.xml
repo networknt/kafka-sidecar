@@ -11,6 +11,14 @@
     <description>Kafka Sidecar</description>
     <url>https://github.com/networknt/kafka-sidecar</url>
 
+    <developers>
+        <developer>
+            <id>stevehu</id>
+            <name>Steve Hu</name>
+            <email>stevehu@gmail.com</email>
+        </developer>
+    </developers>
+
     <issueManagement>
         <system>github</system>
         <url>https://github.com/networknt/kafka-sidecar/issues</url>
