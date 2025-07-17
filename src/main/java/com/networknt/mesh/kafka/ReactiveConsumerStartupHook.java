@@ -45,7 +45,7 @@ import static java.util.concurrent.Executors.newSingleThreadExecutor;
  *
  */
 public class ReactiveConsumerStartupHook extends WriteAuditLog implements StartupHookProvider {
-    private static Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
     public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
     public static KafkaConsumerManager kafkaConsumerManager;
     public static boolean healthy = true;
