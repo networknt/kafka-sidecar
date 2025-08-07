@@ -6,7 +6,7 @@ import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.kafka.producer.CompletableFutures;
@@ -37,7 +37,7 @@ https://doc.networknt.com/development/business-handler/rest/
 */
 public class DeadlettersQueueActivePostHandler extends WriteAuditLog implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(DeadlettersQueueActivePostHandler.class);
-    public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    public static KafkaConsumerConfig config = KafkaConsumerConfig.load();
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
     private static String DLQ_ACTIVE_PROCEDURE_ERROR = "ERR30003";
 
@@ -94,7 +94,7 @@ public class DeadlettersQueueActivePostHandler extends WriteAuditLog implements 
                     if (exception != null) {
                         result.completeExceptionally(exception);
                     } else {
-                        if(config.isAuditEnabled()) {
+                        if(config.getAuditEnabled()) {
                             activeConsumerAuditLog(recordProcessedResult, config.getAuditTarget(), config.getAuditTopic());
                         }
                         result.complete(ProduceResult.fromRecordMetadata(metadata));

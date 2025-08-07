@@ -6,7 +6,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.client.simplepool.SimpleConnectionHolder;
 import com.networknt.config.Config;
 import com.networknt.http.HttpStatus;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
@@ -38,7 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ActiveConsumerMessageHandle extends WriteAuditLog {
 
     private static final Logger logger= LoggerFactory.getLogger(ActiveConsumerMessageHandle.class);
-    static final KafkaConsumerConfig consumerConfig= (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    static final KafkaConsumerConfig consumerConfig= KafkaConsumerConfig.load();
     public static Http2Client client = Http2Client.getInstance();
     public static ClientConnection connection;
     public List<AuditRecord> auditRecords = new ArrayList<>();
@@ -98,7 +98,7 @@ public class ActiveConsumerMessageHandle extends WriteAuditLog {
                 ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(consumerConfig.getBackendApiPath());
                 request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
                 request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                if (consumerConfig.isBackendConnectionReset()) {
+                if (consumerConfig.getBackendConnectionReset()) {
                     request.getRequestHeaders().put(Headers.CONNECTION, "close");
                 }
                 request.getRequestHeaders().put(Headers.HOST, "localhost");

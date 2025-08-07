@@ -6,7 +6,7 @@ import com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGe
 import com.networknt.mesh.kafka.util.*;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.ConsumerSeekRequest;
 import com.networknt.kafka.entity.TopicReplayMetadata;
@@ -29,7 +29,7 @@ import java.util.Optional;
 public class MessageReplayProcessor implements Processor<String, TopicReplayMetadata, String, TopicReplayMetadata> {
 
     private static final Logger logger= LoggerFactory.getLogger(MessageReplayProcessor.class);
-    static final KafkaConsumerConfig consumerConfig= (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    static final KafkaConsumerConfig consumerConfig= KafkaConsumerConfig.load();
     private ProcessorContext processorContext;
     private SubscribeTopic subscribeTopic;
     private ActiveConsumerMessageHandle activeConsumerMessageHandle;

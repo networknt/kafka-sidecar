@@ -5,7 +5,7 @@ import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.mesh.kafka.ProducerStartupHook;
@@ -25,7 +25,7 @@ https://doc.networknt.com/development/business-handler/rest/
 */
 public class ConsumersActiveAuditPostHandler extends WriteAuditLog implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(ConsumersActiveAuditPostHandler.class);
-    public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    public static KafkaConsumerConfig config = KafkaConsumerConfig.load();
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
     private static String CONSUMER_ACTIVE_AUDIT_ERROR = "ERR30004";
 

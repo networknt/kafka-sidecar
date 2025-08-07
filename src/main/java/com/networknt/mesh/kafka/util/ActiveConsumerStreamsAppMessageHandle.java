@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class ActiveConsumerStreamsAppMessageHandle extends WriteAuditLog {
 
     private static final Logger logger= LoggerFactory.getLogger(ActiveConsumerStreamsAppMessageHandle.class);
-    static final KafkaConsumerConfig consumerConfig= (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    static final KafkaConsumerConfig consumerConfig= KafkaConsumerConfig.load();
     private static Http2Client client = Http2Client.getInstance();
     private static HttpClient httpClient = HttpClient.newBuilder().build();
     public List<AuditRecord> auditRecords = new ArrayList<>();

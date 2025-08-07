@@ -7,9 +7,9 @@ import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.httpstring.AttachmentConstants;
-import com.networknt.kafka.common.KafkaConsumerConfig;
-import com.networknt.kafka.common.KafkaProducerConfig;
-import com.networknt.kafka.common.KafkaStreamsConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaProducerConfig;
+import com.networknt.kafka.common.config.KafkaStreamsConfig;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
@@ -33,9 +33,9 @@ import java.util.concurrent.CompletableFuture;
 public class TopicReplayPostHandler extends WriteAuditLog implements LightHttpHandler  {
 
     private static final Logger logger = LoggerFactory.getLogger(TopicReplayPostHandler.class);
-    public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
-    public static KafkaStreamsConfig streamsConfig = (KafkaStreamsConfig) Config.getInstance().getJsonObjectConfig(KafkaStreamsConfig.CONFIG_NAME, KafkaStreamsConfig.class);
-    public static KafkaProducerConfig producerConfig = (KafkaProducerConfig) Config.getInstance().getJsonObjectConfig(KafkaProducerConfig.CONFIG_NAME, KafkaProducerConfig.class);
+    public static KafkaConsumerConfig config = KafkaConsumerConfig.load();
+    public static KafkaStreamsConfig streamsConfig = KafkaStreamsConfig.load();
+    public static KafkaProducerConfig producerConfig = KafkaProducerConfig.load();
     private static String STATUS_ACCEPTED = "SUC10202";
     private static String PRODUCER_NOT_ENABLED = "ERR12216";
     private static String TOPICREPLAY_METADATA_ERROR = "ERR12218";

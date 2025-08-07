@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka.util;
 
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.entity.CreateConsumerInstanceRequest;
 import com.networknt.utility.StringUtils;
 import org.slf4j.Logger;
@@ -14,7 +14,7 @@ import java.util.Map;
 public class CreateConsumerGroup {
 
     private static final Logger logger= LoggerFactory.getLogger(CreateConsumerGroup.class);
-    private final KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    private final KafkaConsumerConfig config = KafkaConsumerConfig.load();
     private static final String KEY_FORMAT = "keyFormat";
     private static final String VALUE_FORMAT = "valueFormat";
     private String instanceId;

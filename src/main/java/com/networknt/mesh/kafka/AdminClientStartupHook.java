@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka;
 
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaAdminConfig;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.LightConsumer;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.ModuleRegistry;

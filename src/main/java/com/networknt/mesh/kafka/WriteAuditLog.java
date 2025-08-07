@@ -3,11 +3,10 @@ package com.networknt.mesh.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
-import com.networknt.server.Server;
 import com.networknt.server.ServerConfig;
 import com.networknt.utility.Constants;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -97,7 +96,7 @@ public class WriteAuditLog {
             for (int i = 0; i < results.size(); i++) {
                 ObjectMapper objectMapper = Config.getInstance().getMapper();
                 RecordProcessedResult result = objectMapper.convertValue(results.get(i), RecordProcessedResult.class);
-                if (config.isDeadLetterEnabled() && !result.isProcessed() && !dlqLastRetry) {
+                if (config.getDeadLetterEnabled() && !result.isProcessed() && !dlqLastRetry) {
                     try {
                         logger.info("Sending correlation id ::: "+ result.getCorrelationId() + " traceabilityId ::: "+ result.getTraceabilityId() + " to DLQ topic ::: "+ (result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt()));
                         ProduceRequest produceRequest = ProduceRequest.create(null, null, null, null,
@@ -153,7 +152,7 @@ public class WriteAuditLog {
                         writeAuditLog(auditRecord, config.getAuditTarget(), config.getAuditTopic());
                     }
                 }
-                if(config.isAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
+                if(config.getAuditEnabled())  reactiveConsumerAuditLog(result, config.getAuditTarget(), config.getAuditTopic());
             }
             if(logger.isDebugEnabled()) {
                 logger.debug("Response processing total time is " + (System.currentTimeMillis() - start));

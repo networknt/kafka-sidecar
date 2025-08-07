@@ -1,7 +1,6 @@
 package com.networknt.mesh.kafka.util;
 
-import com.networknt.config.Config;
-import com.networknt.kafka.common.KafkaStreamsConfig;
+import com.networknt.kafka.common.config.KafkaStreamsConfig;
 import com.networknt.kafka.entity.TopicReplayMetadata;
 import com.networknt.service.SingletonServiceFactory;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;
@@ -19,13 +18,13 @@ public class CustomSerdes {
     private CustomSerdes(){}
 
     static final SchemaRegistryClient client= SingletonServiceFactory.getBean(SchemaRegistryClient.class);
-    static final Map<String,Object> kafkaStreamsConfig=((KafkaStreamsConfig) Config.getInstance().getJsonObjectConfig(KafkaStreamsConfig.CONFIG_NAME, KafkaStreamsConfig.class)).getProperties();
+    static final KafkaStreamsConfig kafkaStreamsConfig = KafkaStreamsConfig.load();
     public static final String VALUE_CLASS_NAME_CONFIG = "value.class.name";
 
     static final class TopicReplayMetadataSchemaSerde extends Serdes.WrapperSerde<TopicReplayMetadata> {
         TopicReplayMetadataSchemaSerde() {
-            super(new KafkaJsonSchemaSerializer<>(client, kafkaStreamsConfig),
-                    new KafkaJsonSchemaDeserializer<>(client,kafkaStreamsConfig));
+            super(new KafkaJsonSchemaSerializer<>(client, kafkaStreamsConfig.getKafkaMapProperties()),
+                    new KafkaJsonSchemaDeserializer<>(client,kafkaStreamsConfig.getKafkaMapProperties()));
         }
     }
 
@@ -33,7 +32,7 @@ public class CustomSerdes {
 
         TopicReplayMetadataSchemaSerde serde = new TopicReplayMetadataSchemaSerde();
         Map<String, Object> serdeConfigs = new HashMap<>();
-        serdeConfigs.putAll(kafkaStreamsConfig);
+        serdeConfigs.putAll(kafkaStreamsConfig.getKafkaMapProperties());
         serdeConfigs.put(CustomSerdes.VALUE_CLASS_NAME_CONFIG, TopicReplayMetadata.class);
         serdeConfigs.put(KafkaJsonDeserializerConfig.JSON_VALUE_TYPE, TopicReplayMetadata.class.getName());
         serde.configure(serdeConfigs, false);

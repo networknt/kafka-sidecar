@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka;
 
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.server.StartupHookProvider;
 import com.networknt.utility.ModuleRegistry;
@@ -24,7 +24,7 @@ public class ActiveConsumerStartupHook implements StartupHookProvider {
     @Override
     public void onStartup() {
         logger.info("ActiveConsumerStartupHook begins");
-        KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+        KafkaConsumerConfig config = KafkaConsumerConfig.load();
         kafkaConsumerManager = KafkaConsumerManagerFactory.createKafkaConsumerManager(config);
 
         ModuleRegistry.registerModule(KafkaConsumerConfig.CONFIG_NAME, ActiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaConsumerConfig.CONFIG_NAME), null);

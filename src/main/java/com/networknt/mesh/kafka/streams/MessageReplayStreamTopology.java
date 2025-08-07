@@ -2,9 +2,8 @@ package com.networknt.mesh.kafka.streams;
 
 import com.networknt.mesh.kafka.util.CustomSerdes;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.KafkaStreamsConfig;
+import com.networknt.kafka.common.config.KafkaStreamsConfig;
 import com.networknt.kafka.entity.StreamsDLQMetadata;
-import com.networknt.kafka.streams.LightStreams;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.Topology;
@@ -18,7 +17,7 @@ import java.util.Map;
 public class MessageReplayStreamTopology {
 
     private static final Logger logger = LoggerFactory.getLogger(MessageReplayStreamTopology.class);
-    static final KafkaStreamsConfig kafkaStreamsConfig= (KafkaStreamsConfig) Config.getInstance().getJsonObjectConfig(KafkaStreamsConfig.CONFIG_NAME, KafkaStreamsConfig.class);
+    static final KafkaStreamsConfig kafkaStreamsConfig= KafkaStreamsConfig.load();
     private KafkaStreams kafkaStreams;
 
     public static final String replayMetadataSrc= "replay-source";

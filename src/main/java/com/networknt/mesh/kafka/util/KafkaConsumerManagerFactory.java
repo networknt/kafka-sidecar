@@ -1,6 +1,6 @@
 package com.networknt.mesh.kafka.util;
 
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 
 public class KafkaConsumerManagerFactory {

@@ -11,7 +11,7 @@ import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.ConsumerReadCallback;
 import com.networknt.kafka.consumer.KafkaConsumerState;
 import com.networknt.kafka.entity.*;
@@ -49,7 +49,7 @@ import java.util.stream.Collectors;
  */
 public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements LightHttpHandler {
     private static final Logger logger = LoggerFactory.getLogger(DeadlettersQueueReactiveGetHandler.class);
-    public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    public static KafkaConsumerConfig config = KafkaConsumerConfig.load();
     long maxBytes = -1;
     private static String UNEXPECTED_CONSUMER_READ_EXCEPTION = "ERR12205";
     private static String INVALID_TOPIC_NAME = "ERR30001";
@@ -63,7 +63,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
     SidecarProducer lightProducer;
 
     public DeadlettersQueueReactiveGetHandler() {
-        if(config.isDeadLetterEnabled()) {
+        if(config.getDeadLetterEnabled()) {
             if (ProducerStartupHook.producer != null) {
                 lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
             } else {
@@ -77,7 +77,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        groupId = exchange.getQueryParameters().get("group")==null? config.getGroupId() : exchange.getQueryParameters().get("group").getFirst();
+        groupId = exchange.getQueryParameters().get("group")==null? config.getProperties().getGroupId() : exchange.getQueryParameters().get("group").getFirst();
 
         instanceId = REPLAY_DEFAULT_INSTANCE;
 
@@ -179,7 +179,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
                     ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
                     request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
                     request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                    if(config.isBackendConnectionReset()) {
+                    if(config.getBackendConnectionReset()) {
                         request.getRequestHeaders().put(Headers.CONNECTION, "close");
                     }
                     request.getRequestHeaders().put(Headers.HOST, "localhost");

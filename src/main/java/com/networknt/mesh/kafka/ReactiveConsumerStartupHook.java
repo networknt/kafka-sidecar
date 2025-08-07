@@ -9,7 +9,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
-import com.networknt.kafka.common.KafkaConsumerConfig;
+import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
 import com.networknt.server.Server;
@@ -46,11 +46,11 @@ import static java.util.concurrent.Executors.newSingleThreadExecutor;
  */
 public class ReactiveConsumerStartupHook extends WriteAuditLog implements StartupHookProvider {
     private static final Logger logger = LoggerFactory.getLogger(ReactiveConsumerStartupHook.class);
-    public static KafkaConsumerConfig config = (KafkaConsumerConfig) Config.getInstance().getJsonObjectConfig(KafkaConsumerConfig.CONFIG_NAME, KafkaConsumerConfig.class);
+    public static KafkaConsumerConfig config = KafkaConsumerConfig.load();
     public static KafkaConsumerManager kafkaConsumerManager;
     public static boolean healthy = true;
     public static Http2Client client = Http2Client.getInstance();
-    static private ExecutorService executor = newSingleThreadExecutor();
+    static private final ExecutorService executor = newSingleThreadExecutor();
     public List<AuditRecord> auditRecords = new ArrayList<>();
     long timeoutMs = -1;
     long maxBytes = -1;
@@ -66,7 +66,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
     @Override
     public void onStartup() {
         logger.info("ReactiveConsumerStartupHook begins");
-        if(config.isDeadLetterEnabled()) {
+        if(config.getDeadLetterEnabled()) {
             if (ProducerStartupHook.producer != null) {
                 lightProducer = (SidecarProducer) SingletonServiceFactory.getBean(NativeLightProducer.class);
             } else {
@@ -76,7 +76,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         }
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = KafkaConsumerManagerFactory.createKafkaConsumerManager(config);
-        groupId = (String) config.getProperties().get("group.id");
+        groupId = (String) config.getProperties().getGroupId();
         subscribeTopic();
         runConsumer();
         logger.info("ReactiveConsumerStartupHook ends");
@@ -180,7 +180,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                         ClientRequest request = new ClientRequest().setMethod(Methods.POST).setPath(config.getBackendApiPath());
                                         request.getRequestHeaders().put(Headers.CONTENT_TYPE, "application/json");
                                         request.getRequestHeaders().put(Headers.TRANSFER_ENCODING, "chunked");
-                                        if(config.isBackendConnectionReset()) {
+                                        if(config.getBackendConnectionReset()) {
                                             request.getRequestHeaders().put(Headers.CONNECTION, "close");
                                         }
                                         request.getRequestHeaders().put(Headers.HOST, "localhost");
