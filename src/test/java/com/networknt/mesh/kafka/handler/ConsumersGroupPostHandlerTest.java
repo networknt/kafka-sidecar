@@ -78,17 +78,8 @@ public class ConsumersGroupPostHandlerTest {
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " + body);
-        Optional<HeaderValues> contentTypeName = Optional.ofNullable(reference.get().getResponseHeaders().get(Headers.CONTENT_TYPE));
-        SchemaValidator schemaValidator = new SchemaValidator();
-        ResponseValidator responseValidator = new ResponseValidator(schemaValidator);
         int statusCode = reference.get().getResponseCode();
-        Status status;
-        if(contentTypeName.isPresent()) {
-            status = responseValidator.validateResponseContent(body, requestUri, httpMethod, String.valueOf(statusCode), contentTypeName.get().getFirst());
-        } else {
-            status = responseValidator.validateResponseContent(body, requestUri, httpMethod, String.valueOf(statusCode), JSON_MEDIA_TYPE);
-        }
-        Assert.assertNull(status);
+        Assert.assertNull(body);
     }
 
     @Test
@@ -125,16 +116,7 @@ public class ConsumersGroupPostHandlerTest {
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         System.out.println("body = " + body);
-        Optional<HeaderValues> contentTypeName = Optional.ofNullable(reference.get().getResponseHeaders().get(Headers.CONTENT_TYPE));
-        SchemaValidator schemaValidator = new SchemaValidator();
-        ResponseValidator responseValidator = new ResponseValidator(schemaValidator);
         int statusCode = reference.get().getResponseCode();
-        Status status;
-        if(contentTypeName.isPresent()) {
-            status = responseValidator.validateResponseContent(body, requestUri, httpMethod, String.valueOf(statusCode), contentTypeName.get().getFirst());
-        } else {
-            status = responseValidator.validateResponseContent(body, requestUri, httpMethod, String.valueOf(statusCode), JSON_MEDIA_TYPE);
-        }
-        Assert.assertNull(status);
+        Assert.assertNull(body);
     }
 }

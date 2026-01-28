@@ -2,10 +2,7 @@ package com.networknt.mesh.kafka;
 
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaAdminConfig;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
-import com.networknt.kafka.consumer.LightConsumer;
 import com.networknt.server.StartupHookProvider;
-import com.networknt.utility.ModuleRegistry;
 import org.apache.kafka.clients.admin.Admin;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +23,6 @@ public class AdminClientStartupHook implements StartupHookProvider {
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
         masks.add("schema.registry.ssl.truststore.password");
-        ModuleRegistry.registerModule(KafkaAdminConfig.CONFIG_NAME, AdminClientStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaAdminConfig.CONFIG_NAME), masks);
         logger.info("AdminClientStartupHook ends");
     }
 }

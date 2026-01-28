@@ -3,7 +3,6 @@ package com.networknt.mesh.kafka;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaKsqldbConfig;
 import com.networknt.server.StartupHookProvider;
-import com.networknt.utility.ModuleRegistry;
 import io.confluent.ksql.api.client.Client;
 import io.confluent.ksql.api.client.ClientOptions;
 import org.slf4j.Logger;
@@ -38,7 +37,6 @@ public class KsqldbActiveConsumerStartupHook implements StartupHookProvider {
         List<String> masks = new ArrayList<>();
         masks.add("basic.auth.user.info");
         masks.add("sasl.jaas.config");
-        ModuleRegistry.registerModule(KafkaKsqldbConfig.CONFIG_NAME, KsqldbActiveConsumerStartupHook.class.getName(), Config.getInstance().getJsonMapConfigNoCache(KafkaKsqldbConfig.CONFIG_NAME), masks);
 
         logger.debug("KsqldbActiveConsumerStartupHook ends");
     }
