@@ -18,7 +18,10 @@ import io.undertow.client.ClientResponse;
 import io.undertow.server.HttpServerExchange;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
+import com.networknt.kafka.streams.KafkaStreamsRegistry;
 import org.apache.kafka.clients.admin.DescribeClusterResult;
+import org.apache.kafka.streams.KafkaStreams;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.OptionMap;
@@ -88,6 +91,21 @@ public class SidecarHealthHandler implements LightHttpHandler {
                 // if there is any error in the loop, don't need to check further.
                 if(result.equals(HEALTH_RESULT_ERROR)) break;
             }
+            // check if there are any kafka streams registered.
+            Map<String, KafkaStreams> streamsMap = KafkaStreamsRegistry.getRegistry();
+            if(streamsMap != null && !streamsMap.isEmpty()) {
+                for(Map.Entry<String, KafkaStreams> entry: streamsMap.entrySet()) {
+                    KafkaStreams streams = entry.getValue();
+                    if(streams.state().isRunningOrRebalancing()) {
+                        continue;
+                    } else {
+                        logger.error("KafkaStreams " + entry.getKey() + " is in state " + streams.state());
+                        result = HEALTH_RESULT_ERROR;
+                        break;
+                    }
+                }
+            }
+
         } else {
             logger.error("No startup hook is defined and none of the component is enabled.");
             result = HEALTH_RESULT_ERROR;
