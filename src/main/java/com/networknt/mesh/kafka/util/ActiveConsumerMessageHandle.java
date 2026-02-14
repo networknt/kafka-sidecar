@@ -3,7 +3,7 @@ package com.networknt.mesh.kafka.util;
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.mesh.kafka.WriteAuditLog;
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.http.HttpStatus;
 import com.networknt.kafka.common.config.KafkaConsumerConfig;
@@ -49,7 +49,7 @@ public class ActiveConsumerMessageHandle extends WriteAuditLog {
         long start=System.currentTimeMillis();;
         List<Map<String,Object>> recordMaps=null;
         List<SidecarConsumerRecord> records=new ArrayList<>();
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
 
 
         try{

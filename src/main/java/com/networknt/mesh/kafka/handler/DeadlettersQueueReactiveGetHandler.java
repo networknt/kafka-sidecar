@@ -1,6 +1,6 @@
 package com.networknt.mesh.kafka.handler;
 
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.mesh.kafka.ProducerStartupHook;
@@ -128,7 +128,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
         List<ConsumerRecord<Object, Object>> records;
         AtomicReference<Result<List<ConsumerRecord<Object, Object>>>> returnedResult = null;
         // we need to make sure that we have the backend connection available before we start to read records.
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             if (config.getBackendApiHost().startsWith(Constants.HTTPS)) {
                 connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));

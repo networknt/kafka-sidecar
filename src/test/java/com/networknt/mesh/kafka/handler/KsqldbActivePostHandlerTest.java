@@ -2,7 +2,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.ClientException;
 import com.networknt.kafka.entity.KsqlDbPullQueryRequest;
@@ -60,7 +60,7 @@ public class KsqldbActivePostHandlerTest {
         ksqlDbPullQueryRequest.setQuery("SELECT select * from QUERYUSER1 where id ='1'");
         String requestBody = JsonMapper.toJson(ksqlDbPullQueryRequest);
         System.out.println("request:" + requestBody);
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             if(enableHttps) {
                 connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);

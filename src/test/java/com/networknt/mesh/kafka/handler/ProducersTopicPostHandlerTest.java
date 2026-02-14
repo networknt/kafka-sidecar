@@ -1,7 +1,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.exception.ClientException;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
@@ -59,7 +59,7 @@ public class ProducersTopicPostHandlerTest {
         String requestUri = "/producers/test1";
         String httpMethod = "post";
         String requestBody = "{\"key_schema_id\":1,\"value_schema_id\":2,\"records\":[{\"key\":\"alice\",\"value\":{\"count\":0}},{\"key\":\"john\",\"value\":{\"count\":1}},{\"key\":\"alex\",\"value\":{\"count\":2}}]}";
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             if(enableHttps) {
                 connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);
@@ -105,7 +105,7 @@ public class ProducersTopicPostHandlerTest {
         String requestUri = "/producers/test1";
         String httpMethod = "post";
         String requestBody = "{\"format\":3,\"key_schema_id\":1,\"value_schema_id\":2,\"records\":[{\"key\":\"alice\",\"value\":{\"count\":0}},{\"key\":\"john\",\"value\":{\"count\":1}},{\"key\":\"alex\",\"value\":{\"count\":2}}]}";
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
 
         try {
             if(enableHttps) {
@@ -152,7 +152,7 @@ public class ProducersTopicPostHandlerTest {
         String requestUri = "/producers/test2";
         String httpMethod = "post";
         String requestBody = "{\"format\":2,\"key_schema_id\":3,\"value_schema_id\":5,\"records\":[{\"key\":\"Alex\",\"value\":{\"count\":0}},{\"key\":\"Alice\",\"value\":{\"count\":1}},{\"key\":\"Bob\",\"value\":{\"count\":2}}]}";
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
 
         try {
             if(enableHttps) {
@@ -199,7 +199,7 @@ public class ProducersTopicPostHandlerTest {
         String requestUri = "/producers/test3";
         String httpMethod = "post";
         String requestBody = "{\"format\":4,\"key_schema_id\":6,\"value_schema_id\":7,\"records\":[{\"key\":{\"name\":\"Steve\"},\"value\":{\"count\":1,\"name\":\"Steve\"}}]}";
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
 
         try {
             if(enableHttps) {

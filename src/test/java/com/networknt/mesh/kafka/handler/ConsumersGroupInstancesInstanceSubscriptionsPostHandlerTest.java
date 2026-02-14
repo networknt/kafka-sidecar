@@ -2,7 +2,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.exception.ClientException;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
@@ -52,7 +52,7 @@ public class ConsumersGroupInstancesInstanceSubscriptionsPostHandlerTest {
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
         String requestUri = "/consumers/TikEZIiwWxntRaBgDYft/instances/TikEZIiwWxntRaBgDYft/subscriptions";
         String httpMethod = "post";
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             if(enableHttps) {
                 connectionToken = client.borrow(new URI(url), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, enableHttp2 ? OptionMap.create(UndertowOptions.ENABLE_HTTP2, true): OptionMap.EMPTY);

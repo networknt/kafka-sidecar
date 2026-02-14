@@ -1,7 +1,7 @@
 package com.networknt.mesh.kafka;
 
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaKsqldbConfig;
 import com.networknt.utility.Constants;
@@ -46,7 +46,7 @@ public class RowSubscriber implements Subscriber<Row> {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<ClientResponse> reference = new AtomicReference<>();
 
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
 
         try {
             if (config.getBackendUrl().startsWith(Constants.HTTPS)) {

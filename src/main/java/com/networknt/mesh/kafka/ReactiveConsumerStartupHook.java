@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka;
 
 import com.networknt.mesh.kafka.handler.SidecarHealthHandler;
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.kafka.producer.NativeLightProducer;
 import com.networknt.kafka.producer.SidecarProducer;
 import com.networknt.client.Http2Client;
@@ -166,8 +166,8 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                     if (logger.isDebugEnabled())
                                         logger.debug("polled records size = " + records.size());
                                     final AtomicReference<ClientResponse> reference = new AtomicReference<>();
-                                    SimpleConnectionHolder.ConnectionToken connectionToken = null;
-                                    SimpleConnectionHolder holder = null;
+                                    SimpleConnectionState.ConnectionToken connectionToken = null;
+                                    SimpleConnectionState holder = null;
                                     try {
                                         if (config.getBackendApiHost().startsWith(Constants.HTTPS)) {
                                             connectionToken = client.borrow(new URI(config.getBackendApiHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));

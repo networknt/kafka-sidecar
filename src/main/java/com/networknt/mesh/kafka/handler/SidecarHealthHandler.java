@@ -1,7 +1,7 @@
 package com.networknt.mesh.kafka.handler;
 
 import com.networknt.client.Http2Client;
-import com.networknt.client.simplepool.SimpleConnectionHolder;
+import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.handler.LightHttpHandler;
 import com.networknt.health.HealthConfig;
@@ -129,7 +129,7 @@ public class SidecarHealthHandler implements LightHttpHandler {
     public static String backendHealth() {
         String result = HEALTH_RESULT_OK;
         long start = System.currentTimeMillis();
-        SimpleConnectionHolder.ConnectionToken connectionToken = null;
+        SimpleConnectionState.ConnectionToken connectionToken = null;
         try {
             if(config.getDownstreamHost().startsWith(Constants.HTTPS)) {
                 connectionToken = client.borrow(new URI(config.getDownstreamHost()), Http2Client.WORKER, client.getDefaultXnioSsl(), Http2Client.BUFFER_POOL, OptionMap.create(UndertowOptions.ENABLE_HTTP2, true));
