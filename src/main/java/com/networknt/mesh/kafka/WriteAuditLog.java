@@ -93,6 +93,24 @@ public class WriteAuditLog {
                 logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
                 throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
             }
+			// count failed records
+            AtomicInteger failedRecords = new AtomicInteger();
+
+            var threshold = config.getBatchRollbackThreshold() * results.size() / 100.0;
+
+            results.forEach((result)->{
+                if(!ObjectUtils.isEmpty(result.get("processed")) && !Boolean.parseBoolean(result.get("processed").toString())){
+                    failedRecords.getAndIncrement();
+                }
+            });
+
+            // if failed records exceeds the threshold, then we will rollback entire batch
+            if (failedRecords.get() >= threshold) {
+                logger.error("Failed records count {} out of result batch size {} exceeds the failure threshold percentage {} " +
+                        "in the batch, will rollback the entire batch",failedRecords,results.size(),config.getBatchRollbackThreshold()   );
+                throw new RollbackException("Failed records " + failedRecords + " exceeds the threshold");
+            }
+
             for (int i = 0; i < results.size(); i++) {
                 ObjectMapper objectMapper = Config.getInstance().getMapper();
                 RecordProcessedResult result = objectMapper.convertValue(results.get(i), RecordProcessedResult.class);
@@ -104,8 +122,23 @@ public class WriteAuditLog {
                         ProduceRecord produceRecord = ProduceRecord.create(null,null, null, null, null);
                         produceRecord.setKey(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getKey()))));
                         produceRecord.setValue(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getValue()))));
-                        produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
-                        produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
+                       if(!ObjectUtils.isEmpty(result.getCorrelationId())){
+                            produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
+                        }
+                        else if(!ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING))){
+                            produceRecord.setCorrelationId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING).toString()));
+                        }
+
+                        if(!ObjectUtils.isEmpty(result.getTraceabilityId())){
+                            produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
+                        }
+                        else if(!ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING))){
+                            produceRecord.setTraceabilityId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING).toString()));
+                        }
+                        produceRecord.setHeaders(Optional.empty());
+                        if(!ObjectUtils.isEmpty(result.getRecord().getTimestamp()) && result.getRecord().getTimestamp() >0) {
+                            produceRecord.setTimestamp(Optional.of(result.getRecord().getTimestamp()));
+                        }
                         produceRequest.setRecords(Arrays.asList(produceRecord));
                         // populate the keyFormat and valueFormat from kafka-producer.yml if request doesn't have them.
                         if(config.getKeyFormat() != null) {

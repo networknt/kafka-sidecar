@@ -220,28 +220,37 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                         } else {
                                             // The body will contains RecordProcessedResult for dead letter queue and audit.
                                             // Write the dead letter queue if necessary.
-                                            if (logger.isInfoEnabled())
+                                            if (logger.isInfoEnabled()) {
                                                 logger.info("Got successful response from the backend API");
-                                            processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
-                                            /**
-                                             * Always seek to the offset of last record in the processed batch for each topic and each partition
-                                             */
+                                            }
+                                            boolean rollbackBatch = false;
+                                            try {
+                                                processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
+                                            } catch (RollbackException ex) {
+                                                rollbackBatch = true;
+                                            }
 
-                                            List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList= topicPartitionOffsetMetadataUtility(records);
-                                            ConsumerOffsetCommitRequest consumerOffsetCommitRequest= new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
-                                            kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
-                                                if(null !=e1){
-                                                    logger.error("Error committing offset, will force a restart ", e1);
-                                                    throw new RuntimeException(e1.getMessage());
-                                                }
-                                                else{
-                                                    topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
-                                                        logger.info("Committed to topic = "+ topicPartitionOffset.getTopic() +
-                                                                " partition = "+ topicPartitionOffset.getPartition()+ " offset = "+topicPartitionOffset.getOffset());
-                                                    }));
-                                                }
-                                            });
-
+                                            if (!rollbackBatch) {
+                                                /**
+                                                 * Always seek to the offset of last record in the processed batch for each topic and each partition
+                                                 */
+                                                List<TopicPartitionOffsetMetadata> topicPartitionOffsetMetadataList = topicPartitionOffsetMetadataUtility(records);
+                                                ConsumerOffsetCommitRequest consumerOffsetCommitRequest = new ConsumerOffsetCommitRequest(topicPartitionOffsetMetadataList);
+                                                kafkaConsumerManager.commitOffsets(groupId, instanceId, false, consumerOffsetCommitRequest, (list, e1) -> {
+                                                    if (null != e1) {
+                                                        logger.error("Error committing offset, will force a restart ", e1);
+                                                        throw new RuntimeException(e1.getMessage());
+                                                    } else {
+                                                        topicPartitionOffsetMetadataList.forEach((topicPartitionOffset -> {
+                                                            logger.info("Committed to topic = " + topicPartitionOffset.getTopic() +
+                                                                    " partition = " + topicPartitionOffset.getPartition() + " offset = " + topicPartitionOffset.getOffset());
+                                                        }));
+                                                    }
+                                                });
+                                            } else {
+                                                logger.error("Rollback due to number of failed messages reaching threshold");
+                                                kafkaConsumerManager.rollback(records, groupId, instanceId);
+                                            }
                                             readyForNextBatch = true;
                                         }
                                     } catch (Exception exception) {
