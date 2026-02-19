@@ -125,14 +125,16 @@ public class WriteAuditLog {
                        if(!ObjectUtils.isEmpty(result.getCorrelationId())){
                             produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
                         }
-                        else if(!ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING))){
+                        else if(result.getRecord().getHeaders() != null
+                                && !ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING))){
                             produceRecord.setCorrelationId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING).toString()));
                         }
 
                         if(!ObjectUtils.isEmpty(result.getTraceabilityId())){
                             produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
                         }
-                        else if(!ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING))){
+                        else if(result.getRecord().getHeaders() != null
+                                && !ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING))){
                             produceRecord.setTraceabilityId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING).toString()));
                         }
                         produceRecord.setHeaders(Optional.empty());
