@@ -107,7 +107,7 @@ public class WriteAuditLog {
             // if failed records exceeds the threshold, then we will rollback entire batch
             if (failedRecords.get() >= threshold) {
                 logger.error("Failed records count {} out of result batch size {} exceeds the failure threshold percentage {} " +
-                        "in the batch, will rollback the entire batch",failedRecords,results.size(),config.getBatchRollbackThreshold()   );
+                        "in the batch, will rollback the entire batch",failedRecords,results.size(),config.getBatchRollbackThreshold());
                 throw new RollbackException("Failed records " + failedRecords + " exceeds the threshold");
             }
 
