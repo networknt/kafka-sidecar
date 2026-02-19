@@ -227,6 +227,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             try {
                                                 processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
                                             } catch (RollbackException ex) {
+                                                logger.error("Rollback due to number of failed messages reaching threshold", ex);
                                                 rollbackBatch = true;
                                             }
 
