@@ -5,10 +5,13 @@ import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
+import com.networknt.kafka.consumer.exception.RollbackException;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
+import com.networknt.server.Server;
 import com.networknt.server.ServerConfig;
 import com.networknt.utility.Constants;
+import com.networknt.utility.ObjectUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.networknt.handler.LightHttpHandler.logger;
 
@@ -87,13 +91,16 @@ public class WriteAuditLog {
         if(responseBody != null) {
             long start = System.currentTimeMillis();
             List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
+
+            // check record size
             if (results.size() != recordSize) {
                 // if the string2List failed, then a RuntimeException has thrown already.
                 // https://github.com/networknt/kafka-sidecar/issues/70 if the response size doesn't match the record size
                 logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
                 throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
             }
-			// count failed records
+
+            // count failed records
             AtomicInteger failedRecords = new AtomicInteger();
 
             var threshold = config.getBatchRollbackThreshold() * results.size() / 100.0;
@@ -122,8 +129,6 @@ public class WriteAuditLog {
                         ProduceRecord produceRecord = ProduceRecord.create(null,null, null, null, null);
                         produceRecord.setKey(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getKey()))));
                         produceRecord.setValue(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getValue()))));
-                       if(!ObjectUtils.isEmpty(result.getCorrelationId())){
-                            produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
                         if(!ObjectUtils.isEmpty(result.getCorrelationId())){
                             produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
                         } else {
@@ -160,7 +165,7 @@ public class WriteAuditLog {
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
                         org.apache.kafka.common.header.Headers headers = kafkaConsumerManager.populateHeaders(result);
-                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), ServerConfig.load().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
                             long startAudit = System.currentTimeMillis();
@@ -185,7 +190,7 @@ public class WriteAuditLog {
                         auditRecord.setTopic(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt());
                         auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
                         auditRecord.setAuditStatus(AuditRecord.AuditStatus.FAILURE);
-                        auditRecord.setServiceId(ServerConfig.getInstance().getServiceId());
+                        auditRecord.setServiceId(ServerConfig.load().getServiceId());
                         auditRecord.setStacktrace(e.getMessage());
                         auditRecord.setOffset(0);
                         auditRecord.setPartition(0);

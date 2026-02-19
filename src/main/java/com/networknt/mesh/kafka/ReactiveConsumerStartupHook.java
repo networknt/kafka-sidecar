@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.kafka.consumer.exception.RollbackException;
 import com.networknt.mesh.kafka.handler.SidecarHealthHandler;
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.client.simplepool.SimpleConnectionState;
