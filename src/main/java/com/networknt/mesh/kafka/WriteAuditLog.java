@@ -124,18 +124,28 @@ public class WriteAuditLog {
                         produceRecord.setValue(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getValue()))));
                        if(!ObjectUtils.isEmpty(result.getCorrelationId())){
                             produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
-                        }
-                        else if(result.getRecord().getHeaders() != null
-                                && !ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING))){
-                            produceRecord.setCorrelationId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.CORRELATION_ID_STRING).toString()));
+                        if(!ObjectUtils.isEmpty(result.getCorrelationId())){
+                            produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
+                        } else {
+                            Map<String, Object> headers = result.getRecord().getHeaders();
+                            if (headers != null) {
+                                Object correlationHeader = headers.get(Constants.CORRELATION_ID_STRING);
+                                if (!ObjectUtils.isEmpty(correlationHeader)) {
+                                    produceRecord.setCorrelationId(Optional.ofNullable(correlationHeader.toString()));
+                                }
+                            }
                         }
 
                         if(!ObjectUtils.isEmpty(result.getTraceabilityId())){
                             produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
-                        }
-                        else if(result.getRecord().getHeaders() != null
-                                && !ObjectUtils.isEmpty(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING))){
-                            produceRecord.setTraceabilityId(Optional.ofNullable(result.getRecord().getHeaders().get(Constants.TRACEABILITY_ID_STRING).toString()));
+                        } else {
+                            Map<String, Object> headers = result.getRecord().getHeaders();
+                            if (headers != null) {
+                                Object traceabilityHeader = headers.get(Constants.TRACEABILITY_ID_STRING);
+                                if (!ObjectUtils.isEmpty(traceabilityHeader)) {
+                                    produceRecord.setTraceabilityId(Optional.ofNullable(traceabilityHeader.toString()));
+                                }
+                            }
                         }
                         produceRecord.setHeaders(Optional.empty());
                         if(!ObjectUtils.isEmpty(result.getRecord().getTimestamp()) && result.getRecord().getTimestamp() >0) {
