@@ -1,6 +1,6 @@
 package com.networknt.mesh.kafka;
 
-import com.networknt.kafka.entity.RollbackException;
+import com.networknt.kafka.consumer.exception.RollbackException;
 import org.junit.Test;
 
 import java.util.Arrays;

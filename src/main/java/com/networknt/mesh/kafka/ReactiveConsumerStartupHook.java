@@ -1,5 +1,6 @@
 package com.networknt.mesh.kafka;
 
+import com.networknt.kafka.consumer.exception.RollbackException;
 import com.networknt.mesh.kafka.handler.SidecarHealthHandler;
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
 import com.networknt.client.simplepool.SimpleConnectionState;
@@ -227,6 +228,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
                                             try {
                                                 processResponse(ReactiveConsumerStartupHook.kafkaConsumerManager,lightProducer, config, body, statusCode, records.size(), auditRecords, false);
                                             } catch (RollbackException ex) {
+                                                logger.error("Rollback due to number of failed messages reaching threshold", ex);
                                                 rollbackBatch = true;
                                             }
 
