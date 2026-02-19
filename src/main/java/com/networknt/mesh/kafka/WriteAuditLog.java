@@ -87,6 +87,21 @@ public class WriteAuditLog {
         }
     }
 
+    protected void checkBatchRollbackThreshold(List<Map<String, Object>> results, int batchRollbackThreshold) {
+        AtomicInteger failedRecords = new AtomicInteger();
+        double threshold = batchRollbackThreshold * results.size() / 100.0;
+        results.forEach(result -> {
+            if (!ObjectUtils.isEmpty(result.get("processed")) && !Boolean.parseBoolean(result.get("processed").toString())) {
+                failedRecords.getAndIncrement();
+            }
+        });
+        if (failedRecords.get() >= threshold) {
+            logger.error("Failed records count {} out of result batch size {} exceeds the failure threshold percentage {} " +
+                    "in the batch, will rollback the entire batch", failedRecords, results.size(), batchRollbackThreshold);
+            throw new RollbackException("Failed records " + failedRecords + " exceeds the threshold");
+        }
+    }
+
     public void processResponse(KafkaConsumerManager kafkaConsumerManager, SidecarProducer lightProducer, KafkaConsumerConfig config, String responseBody, int statusCode, int recordSize, List<AuditRecord> auditRecords, boolean dlqLastRetry) {
         if(responseBody != null) {
             long start = System.currentTimeMillis();
@@ -99,24 +114,7 @@ public class WriteAuditLog {
                 logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
                 throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
             }
-
-            // count failed records
-            AtomicInteger failedRecords = new AtomicInteger();
-
-            var threshold = config.getBatchRollbackThreshold() * results.size() / 100.0;
-
-            results.forEach((result)->{
-                if(!ObjectUtils.isEmpty(result.get("processed")) && !Boolean.parseBoolean(result.get("processed").toString())){
-                    failedRecords.getAndIncrement();
-                }
-            });
-
-            // if failed records exceeds the threshold, then we will rollback entire batch
-            if (failedRecords.get() >= threshold) {
-                logger.error("Failed records count {} out of result batch size {} exceeds the failure threshold percentage {} " +
-                        "in the batch, will rollback the entire batch",failedRecords,results.size(),config.getBatchRollbackThreshold());
-                throw new RollbackException("Failed records " + failedRecords + " exceeds the threshold");
-            }
+            checkBatchRollbackThreshold(results, config.getBatchRollbackThreshold());
 
             for (int i = 0; i < results.size(); i++) {
                 ObjectMapper objectMapper = Config.getInstance().getMapper();
