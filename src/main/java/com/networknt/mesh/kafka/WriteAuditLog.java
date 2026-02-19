@@ -5,10 +5,13 @@ import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.kafka.common.config.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
+import com.networknt.kafka.consumer.exception.RollbackException;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;
+import com.networknt.server.Server;
 import com.networknt.server.ServerConfig;
 import com.networknt.utility.Constants;
+import com.networknt.utility.ObjectUtils;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.networknt.handler.LightHttpHandler.logger;
 
@@ -83,16 +87,35 @@ public class WriteAuditLog {
         }
     }
 
+    protected void checkBatchRollbackThreshold(List<Map<String, Object>> results, int batchRollbackThreshold) {
+        AtomicInteger failedRecords = new AtomicInteger();
+        double threshold = batchRollbackThreshold * results.size() / 100.0;
+        results.forEach(result -> {
+            if (!ObjectUtils.isEmpty(result.get("processed")) && !Boolean.parseBoolean(result.get("processed").toString())) {
+                failedRecords.getAndIncrement();
+            }
+        });
+        if (failedRecords.get() >= threshold) {
+            logger.error("Failed records count {} out of result batch size {} exceeds the failure threshold percentage {} " +
+                    "in the batch, will rollback the entire batch", failedRecords, results.size(), batchRollbackThreshold);
+            throw new RollbackException("Failed records " + failedRecords + " exceeds the threshold");
+        }
+    }
+
     public void processResponse(KafkaConsumerManager kafkaConsumerManager, SidecarProducer lightProducer, KafkaConsumerConfig config, String responseBody, int statusCode, int recordSize, List<AuditRecord> auditRecords, boolean dlqLastRetry) {
         if(responseBody != null) {
             long start = System.currentTimeMillis();
             List<Map<String, Object>> results = JsonMapper.string2List(responseBody);
+
+            // check record size
             if (results.size() != recordSize) {
                 // if the string2List failed, then a RuntimeException has thrown already.
                 // https://github.com/networknt/kafka-sidecar/issues/70 if the response size doesn't match the record size
                 logger.error("The response size " + results.size() + " does not match the record size " + recordSize);
                 throw new RuntimeException("The response size " + results.size() + " does not match the record size " + recordSize);
             }
+            checkBatchRollbackThreshold(results, config.getBatchRollbackThreshold());
+
             for (int i = 0; i < results.size(); i++) {
                 ObjectMapper objectMapper = Config.getInstance().getMapper();
                 RecordProcessedResult result = objectMapper.convertValue(results.get(i), RecordProcessedResult.class);
@@ -104,8 +127,33 @@ public class WriteAuditLog {
                         ProduceRecord produceRecord = ProduceRecord.create(null,null, null, null, null);
                         produceRecord.setKey(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getKey()))));
                         produceRecord.setValue(Optional.of(objectMapper.readTree(objectMapper.writeValueAsString(result.getRecord().getValue()))));
-                        produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
-                        produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
+                        if(!ObjectUtils.isEmpty(result.getCorrelationId())){
+                            produceRecord.setCorrelationId(Optional.ofNullable(result.getCorrelationId()));
+                        } else {
+                            Map<String, Object> headers = result.getRecord().getHeaders();
+                            if (headers != null) {
+                                Object correlationHeader = headers.get(Constants.CORRELATION_ID_STRING);
+                                if (!ObjectUtils.isEmpty(correlationHeader)) {
+                                    produceRecord.setCorrelationId(Optional.ofNullable(correlationHeader.toString()));
+                                }
+                            }
+                        }
+
+                        if(!ObjectUtils.isEmpty(result.getTraceabilityId())){
+                            produceRecord.setTraceabilityId(Optional.ofNullable(result.getTraceabilityId()));
+                        } else {
+                            Map<String, Object> headers = result.getRecord().getHeaders();
+                            if (headers != null) {
+                                Object traceabilityHeader = headers.get(Constants.TRACEABILITY_ID_STRING);
+                                if (!ObjectUtils.isEmpty(traceabilityHeader)) {
+                                    produceRecord.setTraceabilityId(Optional.ofNullable(traceabilityHeader.toString()));
+                                }
+                            }
+                        }
+                        produceRecord.setHeaders(Optional.empty());
+                        if(!ObjectUtils.isEmpty(result.getRecord().getTimestamp()) && result.getRecord().getTimestamp() >0) {
+                            produceRecord.setTimestamp(Optional.of(result.getRecord().getTimestamp()));
+                        }
                         produceRequest.setRecords(Arrays.asList(produceRecord));
                         // populate the keyFormat and valueFormat from kafka-producer.yml if request doesn't have them.
                         if(config.getKeyFormat() != null) {
@@ -115,7 +163,7 @@ public class WriteAuditLog {
                             produceRequest.setValueFormat(Optional.of(EmbeddedFormat.valueOf(config.getValueFormat().toUpperCase())));
                         }
                         org.apache.kafka.common.header.Headers headers = kafkaConsumerManager.populateHeaders(result);
-                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), ServerConfig.getInstance().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
+                        CompletableFuture<ProduceResponse> responseFuture = lightProducer.produceWithSchema(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt(), ServerConfig.load().getServiceId(), Optional.empty(), produceRequest, headers, auditRecords);
                         responseFuture.whenCompleteAsync((response, throwable) -> {
                             // write the audit log here.
                             long startAudit = System.currentTimeMillis();
@@ -140,7 +188,7 @@ public class WriteAuditLog {
                         auditRecord.setTopic(result.getRecord().getTopic().contains(config.getDeadLetterTopicExt())? result.getRecord().getTopic() : result.getRecord().getTopic() + config.getDeadLetterTopicExt());
                         auditRecord.setAuditType(AuditRecord.AuditType.PRODUCER);
                         auditRecord.setAuditStatus(AuditRecord.AuditStatus.FAILURE);
-                        auditRecord.setServiceId(ServerConfig.getInstance().getServiceId());
+                        auditRecord.setServiceId(ServerConfig.load().getServiceId());
                         auditRecord.setStacktrace(e.getMessage());
                         auditRecord.setOffset(0);
                         auditRecord.setPartition(0);
