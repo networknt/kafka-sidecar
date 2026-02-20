@@ -1,5 +1,12 @@
 # Change Log
 
+## [2.3.3](https://github.com/networknt/kafka-sidecar/tree/2.3.3) (2026-02-19)
+
+
+**Merged pull requests:**
+
+
+- bringing property batchRollbackThreshold and sync with customer code [\#197](https://github.com/networknt/kafka-sidecar/pull/197) ([Debashisa](https://github.com/Debashisa))
 ## [2.3.2](https://github.com/networknt/kafka-sidecar/tree/2.3.2) (2026-02-02)
 
 
