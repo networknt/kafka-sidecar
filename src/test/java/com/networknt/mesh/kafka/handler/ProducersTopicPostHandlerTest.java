@@ -16,10 +16,10 @@ import io.undertow.util.HeaderValues;
 import io.undertow.util.HttpString;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.Ignore;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Disabled;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.IoUtils;
@@ -30,9 +30,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 
-@Ignore
+@Disabled
 public class ProducersTopicPostHandlerTest {
-    @ClassRule
+    @RegisterExtension
     public static TestServer server = TestServer.getInstance();
 
     static final Logger logger = LoggerFactory.getLogger(ProducersTopicPostHandlerTest.class);
@@ -86,7 +86,7 @@ public class ProducersTopicPostHandlerTest {
         System.out.println("body = " +  body);;
         int statusCode = reference.get().getResponseCode();
         System.out.println("statusCode = " + statusCode);
-        Assert.assertNull(body);
+        Assertions.assertNull(body);
     }
 
     /**
@@ -133,7 +133,7 @@ public class ProducersTopicPostHandlerTest {
         System.out.println("body = " +  body);;
         int statusCode = reference.get().getResponseCode();
         System.out.println("statusCode = " + statusCode);
-        Assert.assertNull(body);
+        Assertions.assertNull(body);
     }
 
     /**
@@ -180,7 +180,7 @@ public class ProducersTopicPostHandlerTest {
         System.out.println("body = " +  body);;
         int statusCode = reference.get().getResponseCode();
         System.out.println("statusCode = " + statusCode);
-        Assert.assertNull(body);
+        Assertions.assertNull(body);
     }
 
     /**
@@ -227,7 +227,7 @@ public class ProducersTopicPostHandlerTest {
         System.out.println("body = " +  body);;
         int statusCode = reference.get().getResponseCode();
         System.out.println("statusCode = " + statusCode);
-        Assert.assertNull(body);
+        Assertions.assertNull(body);
     }
 
 }

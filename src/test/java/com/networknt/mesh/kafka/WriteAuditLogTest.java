@@ -1,7 +1,8 @@
 package com.networknt.mesh.kafka;
 
 import com.networknt.kafka.consumer.exception.RollbackException;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -22,11 +23,11 @@ public class WriteAuditLogTest {
      * Rollback occurs when the number of failed records exceeds the threshold.
      * 4 failures out of 5 records with threshold=50%: 4 >= 2.5 -> rollback
      */
-    @Test(expected = RollbackException.class)
+    @Test
     public void testRollbackWhenFailuresExceedThreshold() {
         List<Map<String, Object>> results = Arrays.asList(
                 record(false), record(false), record(false), record(false), record(true));
-        writeAuditLog.checkBatchRollbackThreshold(results, 50);
+        Assertions.assertThrows(RollbackException.class, () -> writeAuditLog.checkBatchRollbackThreshold(results, 50));
     }
 
     /**
@@ -44,21 +45,21 @@ public class WriteAuditLogTest {
      * Rollback occurs when the number of failed records exactly equals the threshold.
      * 2 failures out of 4 records with threshold=50%: threshold=2.0, 2 >= 2.0 -> rollback
      */
-    @Test(expected = RollbackException.class)
+    @Test
     public void testRollbackWhenFailuresEqualThreshold() {
         List<Map<String, Object>> results = Arrays.asList(
                 record(false), record(false), record(true), record(true));
-        writeAuditLog.checkBatchRollbackThreshold(results, 50);
+        Assertions.assertThrows(RollbackException.class, () -> writeAuditLog.checkBatchRollbackThreshold(results, 50));
     }
 
     /**
      * Rollback occurs for a small batch where the single record fails.
      * 1 failure out of 1 record with threshold=50%: threshold=0.5, 1 >= 0.5 -> rollback
      */
-    @Test(expected = RollbackException.class)
+    @Test
     public void testSmallBatchRollbackWhenAllFail() {
         List<Map<String, Object>> results = Arrays.asList(record(false));
-        writeAuditLog.checkBatchRollbackThreshold(results, 50);
+        Assertions.assertThrows(RollbackException.class, () -> writeAuditLog.checkBatchRollbackThreshold(results, 50));
     }
 
     /**

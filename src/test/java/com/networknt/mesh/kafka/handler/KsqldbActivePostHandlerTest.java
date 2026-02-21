@@ -18,10 +18,10 @@ import io.undertow.client.ClientResponse;
 import io.undertow.util.HeaderValues;
 import io.undertow.util.Headers;
 import io.undertow.util.Methods;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.xnio.IoUtils;
@@ -33,9 +33,9 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 
-@Ignore
+@Disabled
 public class KsqldbActivePostHandlerTest {
-    @ClassRule
+    @RegisterExtension
     public static TestServer server = TestServer.getInstance();
 
     static final Logger logger = LoggerFactory.getLogger(KsqldbActivePostHandlerTest.class);
@@ -85,6 +85,6 @@ public class KsqldbActivePostHandlerTest {
         }
         String body = reference.get().getAttachment(Http2Client.RESPONSE_BODY);
         int statusCode = reference.get().getResponseCode();
-        Assert.assertNull(body);
+        Assertions.assertNull(body);
     }
 }

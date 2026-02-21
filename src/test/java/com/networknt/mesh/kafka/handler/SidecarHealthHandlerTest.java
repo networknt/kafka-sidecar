@@ -2,14 +2,14 @@ package com.networknt.mesh.kafka.handler;
 
 import com.networknt.kafka.streams.KafkaStreamsRegistry;
 import org.apache.kafka.streams.KafkaStreams;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import static org.mockito.Mockito.when;
 
 public class SidecarHealthHandlerTest {
-    // @ClassRule
+    // @RegisterExtension
     // public static TestServer server = TestServer.getInstance();
 
     @Test
@@ -66,7 +66,7 @@ public class SidecarHealthHandlerTest {
         // Let's try to keep it simple and just verify the registry behavior itself for now,
         // as full handler testing requires mocking heavily.
 
-        Assert.assertNotNull(KafkaStreamsRegistry.getRegistry());
-        Assert.assertEquals(mockStreams, KafkaStreamsRegistry.getRegistry().get("test-stream"));
+        Assertions.assertNotNull(KafkaStreamsRegistry.getRegistry());
+        Assertions.assertEquals(mockStreams, KafkaStreamsRegistry.getRegistry().get("test-stream"));
     }
 }
