@@ -5,24 +5,24 @@
 #
 # Author:  Dinesh Alapati, dine.alapati@gmail.com
 #
-# Parameters:
-#   $1:  version
-#
-
 set -ex
 
-VERSION=$1
+VERSION=""
 IMAGE_NAME="networknt/kafka-sidecar"
+LOCAL_BUILD=false
 
 showHelp() {
     echo " "
     echo "Error: $1"
     echo " "
-    echo "    build.sh [VERSION]"
+    echo "    build.sh [VERSION] [-l|--local]"
     echo " "
     echo "    where [VERSION] version of the docker image that you want to publish (example: 0.0.1)"
+    echo "          [-l|--local] optional flag to only build the docker image locally"
     echo " "
     echo "    example: ./build.sh 0.0.1"
+    echo "    example: ./build.sh 0.0.1 -l"
+    echo "    example: ./build.sh -l 0.0.1"
     echo " "
 }
 
@@ -33,9 +33,12 @@ build() {
 }
 
 cleanup() {
-    if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" != "" ]]; then
+    local image_ids
+    image_ids="$(docker image ls --quiet "$IMAGE_NAME" 2> /dev/null | sort -u)"
+
+    if [[ "$image_ids" != "" ]]; then
         echo "Removing old $IMAGE_NAME images"
-        docker images | grep $IMAGE_NAME | awk '{print $3}' | xargs docker rmi -f
+        printf '%s\n' "$image_ids" | xargs docker rmi -f
         echo "Cleanup completed!"
     fi
 }
@@ -44,14 +47,41 @@ publish() {
     echo "Building Docker image with version $VERSION"
     docker build -t $IMAGE_NAME:$VERSION -t $IMAGE_NAME:latest -f ./docker/Dockerfile . --no-cache=true
     echo "Images built with version $VERSION"
-    echo "Pushing image to DockerHub"
-    docker push $IMAGE_NAME -a
-    echo "Image successfully published!"
+
+    if $LOCAL_BUILD; then
+        echo "Skipping DockerHub publish due to local build flag (-l or --local)"
+    else
+        echo "Pushing image to DockerHub"
+        docker push $IMAGE_NAME -a
+        echo "Image successfully published!"
+    fi
 }
 
-if [ -z $VERSION ]; then
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -l|--local)
+            LOCAL_BUILD=true
+            shift
+            ;;
+        -*)
+            showHelp "Invalid option: $1"
+            exit 1
+            ;;
+        *)
+            if [[ -z "$VERSION" ]]; then
+                VERSION="$1"
+            else
+                showHelp "Invalid option: $1"
+                exit 1
+            fi
+            shift
+            ;;
+    esac
+done
+
+if [[ -z "$VERSION" ]]; then
     showHelp "[VERSION] parameter is missing"
-    exit
+    exit 1
 fi
 
 build;
