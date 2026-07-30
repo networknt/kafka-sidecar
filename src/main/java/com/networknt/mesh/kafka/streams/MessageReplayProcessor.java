@@ -6,7 +6,7 @@ import com.networknt.mesh.kafka.handler.ConsumersGroupInstancesInstanceRecordsGe
 import com.networknt.mesh.kafka.util.*;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.ConsumerSeekRequest;
 import com.networknt.kafka.entity.TopicReplayMetadata;

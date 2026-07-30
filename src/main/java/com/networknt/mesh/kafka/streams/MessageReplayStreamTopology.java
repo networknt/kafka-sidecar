@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka.streams;
 
 import com.networknt.mesh.kafka.util.CustomSerdes;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.config.KafkaStreamsConfig;
+import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.entity.StreamsDLQMetadata;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;

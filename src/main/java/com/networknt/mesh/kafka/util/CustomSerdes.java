@@ -1,6 +1,6 @@
 package com.networknt.mesh.kafka.util;
 
-import com.networknt.kafka.common.config.KafkaStreamsConfig;
+import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.entity.TopicReplayMetadata;
 import com.networknt.service.SingletonServiceFactory;
 import io.confluent.kafka.schemaregistry.client.SchemaRegistryClient;

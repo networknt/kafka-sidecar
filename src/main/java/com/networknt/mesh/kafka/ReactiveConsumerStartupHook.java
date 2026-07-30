@@ -10,7 +10,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.*;
 import com.networknt.kafka.entity.*;
 import com.networknt.server.Server;
@@ -77,7 +77,7 @@ public class ReactiveConsumerStartupHook extends WriteAuditLog implements Startu
         }
         // get or create the KafkaConsumerManager
         kafkaConsumerManager = KafkaConsumerManagerFactory.createKafkaConsumerManager(config);
-        groupId = (String) config.getProperties().getGroupId();
+        groupId = config.getGroupId();
         subscribeTopic();
         runConsumer();
         logger.info("ReactiveConsumerStartupHook ends");

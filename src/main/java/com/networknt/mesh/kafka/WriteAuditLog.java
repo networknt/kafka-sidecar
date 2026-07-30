@@ -3,7 +3,7 @@ package com.networknt.mesh.kafka;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.consumer.exception.RollbackException;
 import com.networknt.kafka.entity.*;

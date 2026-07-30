@@ -4,7 +4,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.ConsumerReadCallback;
 import com.networknt.kafka.consumer.KafkaConsumerState;
 import com.networknt.kafka.entity.*;
@@ -39,7 +39,7 @@ public class DeadlettersQueueActiveGetHandler implements LightHttpHandler {
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        String groupId = exchange.getQueryParameters().get("group")==null? config.getProperties().getGroupId() : exchange.getQueryParameters().get("group").getFirst();
+        String groupId = exchange.getQueryParameters().get("group")==null? config.getGroupId() : exchange.getQueryParameters().get("group").getFirst();
         KafkaConsumerState state = ActiveConsumerStartupHook.kafkaConsumerManager.getExistingConsumerInstance(groupId, REPLAY_DEFAULT_INSTANCE);
         String instanceId = REPLAY_DEFAULT_INSTANCE;
         if (state == null) {

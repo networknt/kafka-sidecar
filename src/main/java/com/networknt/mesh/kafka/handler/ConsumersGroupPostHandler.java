@@ -4,7 +4,7 @@ import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.CreateConsumerInstanceRequest;
 import com.networknt.kafka.entity.CreateConsumerInstanceResponse;
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;

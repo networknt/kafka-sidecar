@@ -11,7 +11,7 @@ import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.exception.FrameworkException;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.ConsumerReadCallback;
 import com.networknt.kafka.consumer.KafkaConsumerState;
 import com.networknt.kafka.entity.*;
@@ -77,7 +77,7 @@ public class DeadlettersQueueReactiveGetHandler extends WriteAuditLog implements
 
     @Override
     public void handleRequest(HttpServerExchange exchange) throws Exception {
-        groupId = exchange.getQueryParameters().get("group")==null? config.getProperties().getGroupId() : exchange.getQueryParameters().get("group").getFirst();
+        groupId = exchange.getQueryParameters().get("group")==null? config.getGroupId() : exchange.getQueryParameters().get("group").getFirst();
 
         instanceId = REPLAY_DEFAULT_INSTANCE;
 

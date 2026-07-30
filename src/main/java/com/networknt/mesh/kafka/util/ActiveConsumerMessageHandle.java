@@ -6,7 +6,7 @@ import com.networknt.client.Http2Client;
 import com.networknt.client.simplepool.SimpleConnectionState;
 import com.networknt.config.Config;
 import com.networknt.http.HttpStatus;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.kafka.entity.*;
 import com.networknt.kafka.producer.SidecarProducer;

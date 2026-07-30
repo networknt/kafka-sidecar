@@ -2,7 +2,7 @@ package com.networknt.mesh.kafka.util;
 
 import com.networknt.mesh.kafka.ActiveConsumerStartupHook;
 import com.networknt.config.Config;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.CreateConsumerInstanceRequest;
 import com.networknt.utility.StringUtils;
 import org.slf4j.Logger;

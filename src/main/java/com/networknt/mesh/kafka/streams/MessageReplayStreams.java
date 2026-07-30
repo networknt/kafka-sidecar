@@ -1,7 +1,7 @@
 package com.networknt.mesh.kafka.streams;
 
 import com.networknt.mesh.kafka.util.StreamsFactory;
-import com.networknt.kafka.common.config.KafkaStreamsConfig;
+import com.networknt.kafka.common.KafkaStreamsConfig;
 import com.networknt.kafka.streams.LightStreams;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -24,10 +24,16 @@ public class MessageReplayStreams implements LightStreams {
     @Override
     public void start(String ip, int port) {
         Properties streamProps = new Properties();
-        replayStreamsConfig.getProperties().getMergedProperties().put("auto.offset.reset", "latest");
-        replayStreamsConfig.getProperties().getMergedProperties().put(StreamsConfig.APPLICATION_ID_CONFIG, replayStreamsConfig.getProperties().getApplicationId().concat("-replaystream"));
-        replayStreamsConfig.getProperties().getMergedProperties().put("enable.idempotence","false");
-        streamProps.putAll(replayStreamsConfig.getProperties().getMergedProperties());
+        streamProps.putAll(replayStreamsConfig.getKafkaMapProperties());
+        Object applicationId = streamProps.get(StreamsConfig.APPLICATION_ID_CONFIG);
+        if (applicationId == null) {
+            throw new IllegalStateException("Kafka Streams application.id must be configured for message replay");
+        }
+        // Apply replay-specific overrides after the base properties so they take precedence.
+        streamProps.put("auto.offset.reset", "latest");
+        streamProps.put(StreamsConfig.APPLICATION_ID_CONFIG,
+                applicationId.toString().concat("-replaystream"));
+        streamProps.put("enable.idempotence","false");
         streamProps.put(StreamsConfig.APPLICATION_SERVER_CONFIG, ip +":"+port);
         streamProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         streamProps.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());

@@ -1,7 +1,7 @@
 package com.networknt.mesh.kafka;
 
 import com.networknt.mesh.kafka.util.KafkaConsumerManagerFactory;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.consumer.KafkaConsumerManager;
 import com.networknt.server.StartupHookProvider;
 import org.slf4j.Logger;

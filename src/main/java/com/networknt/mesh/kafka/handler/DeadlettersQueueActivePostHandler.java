@@ -6,7 +6,7 @@ import com.networknt.body.BodyHandler;
 import com.networknt.config.Config;
 import com.networknt.config.JsonMapper;
 import com.networknt.handler.LightHttpHandler;
-import com.networknt.kafka.common.config.KafkaConsumerConfig;
+import com.networknt.kafka.common.KafkaConsumerConfig;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.kafka.entity.RecordProcessedResult;
 import com.networknt.kafka.producer.CompletableFutures;
