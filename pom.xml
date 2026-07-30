@@ -313,6 +313,10 @@
                     <groupId>io.confluent</groupId>
                     <artifactId>connect-ce-logs</artifactId>
                 </exclusion>
+                <exclusion>
+                    <groupId>io.confluent</groupId>
+                    <artifactId>broker-plugins</artifactId>
+                </exclusion>
             </exclusions>
         </dependency>
 
