@@ -9,7 +9,6 @@ import com.networknt.kafka.entity.KsqlDbPullQueryRequest;
 import com.networknt.mesh.kafka.TestServer;
 import com.networknt.openapi.ResponseValidator;
 import com.networknt.openapi.SchemaValidator;
-import com.networknt.schema.SchemaValidatorsConfig;
 import com.networknt.status.Status;
 import io.undertow.UndertowOptions;
 import io.undertow.client.ClientConnection;
