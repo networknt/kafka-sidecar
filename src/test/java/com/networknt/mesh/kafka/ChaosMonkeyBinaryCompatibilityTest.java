@@ -36,10 +36,10 @@ class ChaosMonkeyBinaryCompatibilityTest {
 
     @Test
     void publishedJackson2HandlerFailsButRebuiltHandlerBinds() throws Exception {
-        Path jar = Path.of(System.getProperty("legacy.chaos.jar"));
-        assertTrue(Files.isRegularFile(jar), "Maven must copy the legacy release fixture");
+        Path jar = Path.of(requiredFixtureProperty("legacy.chaos.jar", System.getProperty("legacy.chaos.jar")));
+        assertTrue(Files.isRegularFile(jar), "Legacy fixture jar missing; run mvn test -Dtest=ChaosMonkeyBinaryCompatibilityTest");
         // SHA-256 of the release whose SHA-1 matches Maven Central; reject local rebuilds.
-        assertEquals(System.getProperty("legacy.chaos.sha256"),
+        assertEquals(requiredFixtureProperty("legacy.chaos.sha256", System.getProperty("legacy.chaos.sha256")),
                 HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(jar))));
         var config = Config.getInstance();
         Map<String, Object> previous = config.getJsonMapConfig("chaos-monkey");
@@ -84,6 +84,24 @@ class ChaosMonkeyBinaryCompatibilityTest {
     private static void restoreConfig(Config config, String name, Map<String, Object> previous) {
         if (previous == null) config.clearConfigCache(name);
         else config.putInConfigCache(name, previous);
+    }
+
+    @Test
+    void missingIdeFixturePropertiesExplainHowToRunTheTest() {
+        for (String name : List.of("legacy.chaos.jar", "legacy.chaos.sha256")) {
+            for (String missing : new String[]{null, ""}) {
+                var error = assertThrows(AssertionError.class, () -> requiredFixtureProperty(name, missing));
+                assertTrue(error.getMessage().contains(name));
+                assertTrue(error.getMessage().contains("mvn test"));
+            }
+        }
+    }
+
+    private static String requiredFixtureProperty(String name, String value) {
+        assertTrue(value != null && !value.isBlank(), name + " is required. Run mvn test "
+                + "-Dtest=ChaosMonkeyBinaryCompatibilityTest, or pass legacy.chaos.jar and "
+                + "legacy.chaos.sha256 as IDE VM properties using the fixture defined in pom.xml.");
+        return value;
     }
 
     private HttpServerExchange exchange() {

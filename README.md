@@ -429,3 +429,9 @@ are verified offline with a deliberately unavailable legacy version. Normal
 tests still require and check the pinned release jar. Test config cleanup removes
 the named cache entry when the previous config was absent, rather than inserting
 null; a real-cache regression covers that case.
+
+For IDE/plain JUnit runs, supply `legacy.chaos.jar` and `legacy.chaos.sha256` as VM
+properties using the fixture metadata in the POM. Missing or blank properties now
+fail with a message naming the property and the Maven test command, before path
+or hash processing. `mvn test -Dtest=ChaosMonkeyBinaryCompatibilityTest` prepares
+the fixture and passes both properties automatically.
