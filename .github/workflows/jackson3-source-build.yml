@@ -114,9 +114,6 @@ jobs:
           mvn -f sources/openapi-parser/pom.xml "-Dmaven.repo.local=$JACKSON3_MAVEN_REPO" clean install 2>&1 | tee -a source-build.log
           mvn -f sources/light-rest-4j/pom.xml "-Dmaven.repo.local=$JACKSON3_MAVEN_REPO" clean install 2>&1 | tee -a source-build.log
           mvn -f sources/light-chaos-monkey/pom.xml "-Dmaven.repo.local=$JACKSON3_MAVEN_REPO" clean install 2>&1 | tee -a source-build.log
-          # Only the freshly rebuilt chaos-monkey is qualified, never an older published jar.
-          javap -classpath sources/light-chaos-monkey/chaos-monkey/target/classes -c com.networknt.chaos.ChaosMonkeyPostHandler | tee chaos-monkey-bytecode.txt
-          grep -F 'Config.getMapper:()Ltools/jackson/databind/ObjectMapper;' chaos-monkey-bytecode.txt
           mvn -f sources/light-kafka/pom.xml "-Dmaven.repo.local=$JACKSON3_MAVEN_REPO" clean install 2>&1 | tee -a source-build.log
           mvn -f consumer/pom.xml "-Dmaven.repo.local=$JACKSON3_MAVEN_REPO" clean install 2>&1 | tee -a source-build.log
       - uses: actions/upload-artifact@v4
@@ -127,5 +124,4 @@ jobs:
             source-build.log
             source-commits.txt
             source-refs.json
-            chaos-monkey-bytecode.txt
             **/target/surefire-reports/**

@@ -402,8 +402,12 @@ the Jackson 3 light-4j API before deploying this sidecar.** Its master still
 manages the Jackson 2 BOM. `ChaosMonkeyPostHandler` calls `Config.getMapper()`,
 whose JVM return-type descriptor changed; an older published chaos-monkey jar can
 throw `NoSuchMethodError`. CI explicitly recompiles its source against the new
-config module and checks that call's Jackson 3 descriptor. This proves only the
-rebuilt artifact, not compatibility of an existing published jar. Coordinated
+config module. `ChaosMonkeyBinaryCompatibilityTest` separately loads the actual
+published 2.4.1 handler from a checksum-pinned jar, asserts its `NoSuchMethodError`
+against migrated Config, and checks the rebuilt handler binds under the same
+conditions. The old jar is copied only to `target/legacy` for that negative test;
+it is never added as a runtime dependency. This proves the incompatibility, not
+compatibility of an existing published jar. Coordinated
 chaos-monkey migration/publication remains a Phase 7 release gate; no Phase 7
 source changes or artifact publication are included here.
 
@@ -412,3 +416,8 @@ Portal’s `SidecarFailureEnvelopePublisher` currently fails a targeted compile 
 the mapper assignment and `ProduceRecord.create` call. Portal consumer migration
 and full module qualification remain Phase 7 work, with Portal last; coordinate
 versions and publication before deploying those consumers.
+
+Merge prerequisites in this order: light-rest-4j #450, light-kafka #260, then
+kafka-sidecar #203. The workflow follows each prerequisite PR head while open and
+its base branch after merge, resolving a full SHA before checkout. A passing
+stacked run does not remove that merge order or the chaos-monkey deployment gate.
