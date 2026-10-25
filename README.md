@@ -358,7 +358,8 @@ When user try  following workflow to consumer records:
 ## Jackson 3 migration
 
 The main development line uses Jackson 3.2.3 (`tools.jackson.*`) and
-json-schema-validator 3.0.8. The `2.x` maintenance branch preserves the source
+json-schema-validator 3.0.8 transitively through light-rest-4j (no direct
+sidecar dependency). The `2.x` maintenance branch preserves the source
 before this migration. Jackson requires Java 17+; this project builds with Java 25.
 Annotations retain their `com.fasterxml.jackson.annotation` package.
 
@@ -383,3 +384,20 @@ core/databind. Classic SnakeYAML pin cleanup is deferred to the final migration
 phase. No live Kafka, sidecar, or end-to-end stack is started by these unit tests.
 The 20 existing disabled integration tests remain disabled; the added compatibility
 tests cover produce-body binding, replay list failures and logfile audit JSON.
+`ReplayJacksonBindingTest` also calls the real replay listener and
+`WriteAuditLog.processResponse`, checking ConsumerRecord binding, rebuilt key/value
+trees, metadata, DLQ production and malformed-record failures with mocked clients.
+No broker or integration-test replacement is implied.
+
+The source-build workflow resolves all prerequisites to full SHAs before checkout
+and builds them into a fresh Maven repository. It uses light-kafka PR #260 while
+open, then its base branch after merge. Uploaded `source-refs.json` and
+`source-commits.txt` record the exact build. Manual `source_refs` replay is available
+after the workflow reaches the default branch; reproduce locally before merge.
+These source builds do not qualify independently published snapshot coordinates.
+
+light-kafka changes public mapper/tree types under unchanged snapshot coordinates.
+Portal’s `SidecarFailureEnvelopePublisher` currently fails a targeted compile at
+the mapper assignment and `ProduceRecord.create` call. Portal consumer migration
+and full module qualification remain Phase 7 work, with Portal last; coordinate
+versions and publication before deploying those consumers.
