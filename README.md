@@ -391,10 +391,21 @@ No broker or integration-test replacement is implied.
 
 The source-build workflow resolves all prerequisites to full SHAs before checkout
 and builds them into a fresh Maven repository. It uses light-kafka PR #260 while
-open, then its base branch after merge. Uploaded `source-refs.json` and
+open, then its base branch after merge. The REST fixture repair likewise uses
+light-rest-4j PR #450 until merged; prerequisite tests remain enabled. Uploaded `source-refs.json` and
 `source-commits.txt` record the exact build. Manual `source_refs` replay is available
 after the workflow reaches the default branch; reproduce locally before merge.
 These source builds do not qualify independently published snapshot coordinates.
+
+**Deployment gate: light-chaos-monkey must also be rebuilt and released against
+the Jackson 3 light-4j API before deploying this sidecar.** Its master still
+manages the Jackson 2 BOM. `ChaosMonkeyPostHandler` calls `Config.getMapper()`,
+whose JVM return-type descriptor changed; an older published chaos-monkey jar can
+throw `NoSuchMethodError`. CI explicitly recompiles its source against the new
+config module and checks that call's Jackson 3 descriptor. This proves only the
+rebuilt artifact, not compatibility of an existing published jar. Coordinated
+chaos-monkey migration/publication remains a Phase 7 release gate; no Phase 7
+source changes or artifact publication are included here.
 
 light-kafka changes public mapper/tree types under unchanged snapshot coordinates.
 Portal’s `SidecarFailureEnvelopePublisher` currently fails a targeted compile at
