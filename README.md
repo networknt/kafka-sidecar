@@ -354,3 +354,84 @@ When user try  following workflow to consumer records:
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
 * [Configuration](https://doc.networknt.com/service/proxy/configuration/) for different configurations based on your situations
 * [Artifact](https://doc.networknt.com/service/proxy/artifact/) to guide customer to choose the right artifact to deploy light-proxy.
+
+## Jackson 3 migration
+
+The main development line uses Jackson 3.2.3 (`tools.jackson.*`) and
+json-schema-validator 3.0.8 transitively through light-rest-4j (no direct
+sidecar dependency). The `2.x` maintenance branch preserves the source
+before this migration. Jackson requires Java 17+; this project builds with Java 25.
+Annotations retain their `com.fasterxml.jackson.annotation` package.
+
+Build/install the migrated light-4j/http-client, json-overlay/openapi-parser,
+light-rest-4j and light-kafka sources before building this project. yaml-rule's
+Jackson 3 line uses 4.0.0-SNAPSHOT through those prerequisites. Unchanged framework
+snapshot coordinates do not by themselves prove that a remote artifact is the
+Jackson 3 build. This work installs only into the isolated local migration cache;
+it does not publish snapshots or qualify a clean published-artifact build.
+
+Sidecar REST records, replay conversion and audit output use Jackson 3 mapper/tree
+types. `Jackson2Defaults` retains the measured Jackson 2 JSON feature and stream
+limits. Jackson 3 mappers are immutable; use their builder. `JacksonException` is
+unchecked, and malformed replay JSON still crosses the existing wrapped-error
+boundary. Shared Config YAML reading already follows the accepted YAML 1.2 policy:
+use canonical `true`/`false`, `null`, and decimal numbers rather than YAML 1.1 aliases.
+
+Jackson 2 remains a runtime dependency of light-kafka's Confluent 8.3.2 boundary
+and existing third-party logging/framework dependency paths. Both BOMs are managed
+to keep those distinct coordinates consistent. No sidecar source imports Jackson 2
+core/databind. Classic SnakeYAML pin cleanup is deferred to the final migration
+phase. No live Kafka, sidecar, or end-to-end stack is started by these unit tests.
+The 20 existing disabled integration tests remain disabled; the added compatibility
+tests cover produce-body binding, replay list failures and logfile audit JSON.
+`ReplayJacksonBindingTest` also calls the real replay listener and
+`WriteAuditLog.processResponse`, checking ConsumerRecord binding, rebuilt key/value
+trees, metadata, DLQ production and malformed-record failures with mocked clients.
+No broker or integration-test replacement is implied.
+
+The source-build workflow resolves all prerequisites to full SHAs before checkout
+and builds them into a fresh Maven repository. It uses light-kafka PR #260 while
+open, then its base branch after merge. The REST fixture repair likewise uses
+light-rest-4j PR #450 until merged; prerequisite tests remain enabled. Uploaded `source-refs.json` and
+`source-commits.txt` record the exact build. Manual `source_refs` replay is available
+after the workflow reaches the default branch; reproduce locally before merge.
+These source builds do not qualify independently published snapshot coordinates.
+
+**Deployment gate: light-chaos-monkey must also be rebuilt and released against
+the Jackson 3 light-4j API before deploying this sidecar.** Its master still
+manages the Jackson 2 BOM. `ChaosMonkeyPostHandler` calls `Config.getMapper()`,
+whose JVM return-type descriptor changed; an older published chaos-monkey jar can
+throw `NoSuchMethodError`. CI explicitly recompiles its source against the new
+config module. `ChaosMonkeyBinaryCompatibilityTest` separately loads the actual
+published 2.4.1 handler from a checksum-pinned jar, asserts its `NoSuchMethodError`
+against migrated Config, and checks the rebuilt handler binds under the same
+conditions. The old jar is copied only to `target/legacy` for that negative test;
+it is never added as a runtime dependency. This proves the incompatibility, not
+compatibility of an existing published jar. Coordinated
+chaos-monkey migration/publication remains a Phase 7 release gate; no Phase 7
+source changes or artifact publication are included here.
+
+light-kafka changes public mapper/tree types under unchanged snapshot coordinates.
+Portal’s `SidecarFailureEnvelopePublisher` currently fails a targeted compile at
+the mapper assignment and `ProduceRecord.create` call. Portal consumer migration
+and full module qualification remain Phase 7 work, with Portal last; coordinate
+versions and publication before deploying those consumers.
+
+Merge prerequisites in this order: light-rest-4j #450, light-kafka #260, then
+kafka-sidecar #203. The workflow follows each prerequisite PR head while open and
+its base branch after merge, resolving a full SHA before checkout. A passing
+stacked run does not remove that merge order or the chaos-monkey deployment gate.
+
+The negative binary fixture version, filename and SHA-256 are defined once in
+`pom.xml` and passed to the test by Surefire. Its copy goal is skipped with
+`-DskipTests`; the profile is inactive with `-Dmaven.test.skip=true`. Both modes
+are verified offline with a deliberately unavailable legacy version. Normal
+tests still require and check the pinned release jar. Test config cleanup removes
+the named cache entry when the previous config was absent, rather than inserting
+null; a real-cache regression covers that case.
+
+For IDE/plain JUnit runs, supply `legacy.chaos.jar` and `legacy.chaos.sha256` as VM
+properties using the fixture metadata in the POM. Missing or blank properties now
+fail with a message naming the property and the Maven test command, before path
+or hash processing. `mvn test -Dtest=ChaosMonkeyBinaryCompatibilityTest` prepares
+the fixture and passes both properties automatically.

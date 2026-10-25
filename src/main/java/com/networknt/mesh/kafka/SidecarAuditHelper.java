@@ -1,7 +1,8 @@
 package com.networknt.mesh.kafka;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
+import com.networknt.config.Jackson2Defaults;
 import com.networknt.kafka.entity.AuditRecord;
 import com.networknt.utility.StringUtils;
 import org.slf4j.Logger;
@@ -34,11 +35,11 @@ public class SidecarAuditHelper {
      * @param loggerFunc Consumer<T> getLoggerFuncBasedOnLevel()
      */
     private static void logResultUsingJson(AuditRecord auditRecord, Consumer<String> loggerFunc) {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = Jackson2Defaults.mapper();
         String resultJson = "";
         try {
             resultJson = mapper.writeValueAsString(auditRecord);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             logger.error(e.toString());
         }
         if(StringUtils.isNotBlank(resultJson)){
