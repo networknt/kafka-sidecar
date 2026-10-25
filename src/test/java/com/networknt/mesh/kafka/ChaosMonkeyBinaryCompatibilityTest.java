@@ -25,6 +25,7 @@ import java.util.TreeMap;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -35,10 +36,10 @@ class ChaosMonkeyBinaryCompatibilityTest {
 
     @Test
     void publishedJackson2HandlerFailsButRebuiltHandlerBinds() throws Exception {
-        Path jar = Path.of("target/legacy/chaos-monkey-2.4.1.jar");
+        Path jar = Path.of(System.getProperty("legacy.chaos.jar"));
         assertTrue(Files.isRegularFile(jar), "Maven must copy the legacy release fixture");
         // SHA-256 of the release whose SHA-1 matches Maven Central; reject local rebuilds.
-        assertEquals("e1d2b054a7d8f6390ca0999d2decd858c7cef96fcf5f2c6522a7585f57feefdc",
+        assertEquals(System.getProperty("legacy.chaos.sha256"),
                 HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(Files.readAllBytes(jar))));
         var config = Config.getInstance();
         Map<String, Object> previous = config.getJsonMapConfig("chaos-monkey");
@@ -61,9 +62,28 @@ class ChaosMonkeyBinaryCompatibilityTest {
             assertTrue(linkage.getMessage().contains("com.fasterxml.jackson.databind.ObjectMapper"), linkage::getMessage);
             assertDoesNotThrow(() -> new ChaosMonkeyPostHandler().handleRequest(exchange()));
         } finally {
-            config.putInConfigCache("chaos-monkey", previous);
+            restoreConfig(config, "chaos-monkey", previous);
             ExceptionAssaultHandler.config = previousAssault;
         }
+    }
+
+    @Test
+    void restoresAnAbsentConfigWithoutInsertingNull() {
+        var config = Config.getInstance();
+        String name = "absent-chaos-binary-test";
+        Map<String, Object> previous = config.getJsonMapConfig(name);
+        assertNull(previous);
+        try {
+            config.putInConfigCache(name, Map.of("enabled", true));
+        } finally {
+            restoreConfig(config, name, previous);
+        }
+        assertNull(config.getJsonMapConfig(name));
+    }
+
+    private static void restoreConfig(Config config, String name, Map<String, Object> previous) {
+        if (previous == null) config.clearConfigCache(name);
+        else config.putInConfigCache(name, previous);
     }
 
     private HttpServerExchange exchange() {

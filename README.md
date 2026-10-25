@@ -421,3 +421,11 @@ Merge prerequisites in this order: light-rest-4j #450, light-kafka #260, then
 kafka-sidecar #203. The workflow follows each prerequisite PR head while open and
 its base branch after merge, resolving a full SHA before checkout. A passing
 stacked run does not remove that merge order or the chaos-monkey deployment gate.
+
+The negative binary fixture version, filename and SHA-256 are defined once in
+`pom.xml` and passed to the test by Surefire. Its copy goal is skipped with
+`-DskipTests`; the profile is inactive with `-Dmaven.test.skip=true`. Both modes
+are verified offline with a deliberately unavailable legacy version. Normal
+tests still require and check the pinned release jar. Test config cleanup removes
+the named cache entry when the previous config was absent, rather than inserting
+null; a real-cache regression covers that case.
