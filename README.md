@@ -354,3 +354,32 @@ When user try  following workflow to consumer records:
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
 * [Configuration](https://doc.networknt.com/service/proxy/configuration/) for different configurations based on your situations
 * [Artifact](https://doc.networknt.com/service/proxy/artifact/) to guide customer to choose the right artifact to deploy light-proxy.
+
+## Jackson 3 migration
+
+The main development line uses Jackson 3.2.3 (`tools.jackson.*`) and
+json-schema-validator 3.0.8. The `2.x` maintenance branch preserves the source
+before this migration. Jackson requires Java 17+; this project builds with Java 25.
+Annotations retain their `com.fasterxml.jackson.annotation` package.
+
+Build/install the migrated light-4j/http-client, json-overlay/openapi-parser,
+light-rest-4j and light-kafka sources before building this project. yaml-rule's
+Jackson 3 line uses 4.0.0-SNAPSHOT through those prerequisites. Unchanged framework
+snapshot coordinates do not by themselves prove that a remote artifact is the
+Jackson 3 build. This work installs only into the isolated local migration cache;
+it does not publish snapshots or qualify a clean published-artifact build.
+
+Sidecar REST records, replay conversion and audit output use Jackson 3 mapper/tree
+types. `Jackson2Defaults` retains the measured Jackson 2 JSON feature and stream
+limits. Jackson 3 mappers are immutable; use their builder. `JacksonException` is
+unchecked, and malformed replay JSON still crosses the existing wrapped-error
+boundary. Shared Config YAML reading already follows the accepted YAML 1.2 policy:
+use canonical `true`/`false`, `null`, and decimal numbers rather than YAML 1.1 aliases.
+
+Jackson 2 remains a runtime dependency of light-kafka's Confluent 8.3.2 boundary
+and existing third-party logging/framework dependency paths. Both BOMs are managed
+to keep those distinct coordinates consistent. No sidecar source imports Jackson 2
+core/databind. Classic SnakeYAML pin cleanup is deferred to the final migration
+phase. No live Kafka, sidecar, or end-to-end stack is started by these unit tests.
+The 20 existing disabled integration tests remain disabled; the added compatibility
+tests cover produce-body binding, replay list failures and logfile audit JSON.

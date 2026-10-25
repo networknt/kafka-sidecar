@@ -1,8 +1,8 @@
 package com.networknt.mesh.kafka.util;
 
 import com.networknt.mesh.kafka.WriteAuditLog;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.networknt.client.Http2Client;
 import com.networknt.config.Config;
 import com.networknt.kafka.common.KafkaConsumerConfig;
@@ -85,7 +85,7 @@ public class ActiveConsumerStreamsAppMessageHandle extends WriteAuditLog {
                         if (!ObjectUtils.isEmpty(headers) && !ObjectUtils.isEmpty(headers.get(Constants.CORRELATION_ID_STRING))) {
                             produceRecord.setCorrelationId(Optional.ofNullable(headers.get(Constants.CORRELATION_ID_STRING)));
                         }
-                    } catch (JsonProcessingException e) {
+                    } catch (JacksonException e) {
                         throw new RuntimeException("ActiveConsumerStreamsAppMessageHandle exception while parsing read message ", e);
                     }
 
