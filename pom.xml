@@ -96,7 +96,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.light-4j>3.0.0-SNAPSHOT</version.light-4j>
         <version.jackson>3.2.4</version.jackson>
-        <version.jackson2>2.22.3</version.jackson2>
+        <version.jackson2>2.22.4</version.jackson2>
         <version.slf4j>2.0.20</version.slf4j>
         <version.logstash>8.1</version.logstash>
         <version.jose4j>0.9.7</version.jose4j>
