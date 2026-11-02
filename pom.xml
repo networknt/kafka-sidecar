@@ -91,7 +91,7 @@
         <legacy.chaos.sha256>e1d2b054a7d8f6390ca0999d2decd858c7cef96fcf5f2c6522a7585f57feefdc</legacy.chaos.sha256>
         <legacy.chaos.filename>chaos-monkey.jar</legacy.chaos.filename>
         <legacy.chaos.jar>${project.build.directory}/legacy/${legacy.chaos.filename}</legacy.chaos.jar>
-    <version.central-publishing-maven>0.11.0</version.central-publishing-maven>
+    <version.central-publishing-maven>0.12.0</version.central-publishing-maven>
         <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <version.light-4j>3.0.0-SNAPSHOT</version.light-4j>
