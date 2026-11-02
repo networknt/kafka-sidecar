@@ -98,7 +98,7 @@
         <version.jackson>3.2.4</version.jackson>
         <version.jackson2>2.22.4</version.jackson2>
         <version.slf4j>2.0.20</version.slf4j>
-        <version.logstash>8.1</version.logstash>
+        <version.logstash>9.0</version.logstash>
         <version.jose4j>0.9.7</version.jose4j>
         <version.logback>1.6.6</version.logback>
         <version.junit>6.1.3</version.junit>
