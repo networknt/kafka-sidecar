@@ -354,3 +354,28 @@ When user try  following workflow to consumer records:
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
 * [Configuration](https://doc.networknt.com/service/proxy/configuration/) for different configurations based on your situations
 * [Artifact](https://doc.networknt.com/service/proxy/artifact/) to guide customer to choose the right artifact to deploy light-proxy.
+
+
+### Kafka schema registration migration
+
+Shipped Kafka configurations use the canonical Kafka property
+`properties.auto.register.schemas`. The deployment override names remain
+`kafka-producer.schema.registry.auto.register.schemas`,
+`kafka-consumer.schema.registry.auto.register.schemas`, and
+`kafka-streams.schema.registry.auto.register.schemas`. Existing overrides in
+`values.yml`, config server/Portal values, or environment variables continue to
+work; no override rename is required. The shorter `kafka-*.auto.register.schemas`
+names are not used by these sidecar configurations.
+
+Confluent ignored the old Kafka property `schema.registry.auto.register.schemas`.
+For configurations passed to a Confluent serializer, an existing `false` override
+now selects lookup-only behavior and requires schemas to be registered beforehand;
+`true` allows automatic registration. Light's own Avro serializer retains its
+legacy Kafka-property fallback for handwritten configurations, with the canonical
+property taking precedence.
+
+The packaged `src/main/resources/config/kafka-consumer.yml` retains its `false`
+default; all other supplied client configurations retain `true`. The sidecar
+consumer uses `ByteArrayDeserializer` and does not construct a serializer from
+these consumer properties, so its consumption behavior does not change. Schema
+registration is a serialization setting, not a deserialization setting.
