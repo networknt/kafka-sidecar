@@ -460,21 +460,3 @@ default; all other supplied client configurations retain `true`. The sidecar
 consumer uses `ByteArrayDeserializer` and does not construct a serializer from
 these consumer properties, so its consumption behavior does not change. Schema
 registration is a serialization setting, not a deserialization setting.
-
-### Jackson 3.1.8 CI sources
-
-The Maven pin remains `3.1.8`. CI resolves prerequisites from full commit SHAs in
-`ci/jackson3-source-refs.json`, including the Jackson 3.1.8 downgrade commits;
-there is no default lookup of a moving branch or PR. The optional `source_refs`
-dispatch input overlays that manifest with explicitly supplied full SHAs.
-Before checkout, CI verifies that every selected commit exists and is an ancestor
-of its repository's default branch; unmerged heads and missing commits fail early.
-The selected light-4j source includes the Jackson 3.1.8 common-feature fixture
-repair. Full remote consumer source-build CI is required before merge; local
-cached-dependency tests do not establish source-stack qualification.
-
-The current light-4j pin also contains two config-module fixture repairs that are
-not yet on its default branch. The ancestry check intentionally rejects this pin;
-merge those upstream repairs and update the manifest to their merged commit
-before expecting source-build CI to pass. Do not substitute the existing merge of
-light-4j #2842: it lacks those two repairs.
