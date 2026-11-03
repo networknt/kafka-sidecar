@@ -379,3 +379,21 @@ default; all other supplied client configurations retain `true`. The sidecar
 consumer uses `ByteArrayDeserializer` and does not construct a serializer from
 these consumer properties, so its consumption behavior does not change. Schema
 registration is a serialization setting, not a deserialization setting.
+
+## TLS endpoint identification migration (#265)
+
+Packaged Admin, producer, consumer and Streams configurations now default
+`ssl.endpoint.identification.algorithm` to `https`, and all shipped TLS examples
+show that valid setting. Existing `kafka-*.ssl.endpoint.identification.algorithm`
+external override keys remain unchanged. Remove `algo-name`/`also-name` overrides
+or replace them with `https`: those strings parse but fail a Java TLS handshake.
+The server certificate SAN must match the broker hostname. An explicitly
+configured empty string disables hostname verification; it is never the default.
+Commented examples remain commented and inherit Kafka's native `https` default.
+Schema Registry SSL and all schema-registration settings are unchanged.
+This source change does not update deployed configuration.
+
+The configuration regression checks all 21 shipped TLS examples and typed
+properties for all four packaged clients, including explicit empty overrides.
+The companion light-kafka fix for networknt/light-kafka#265 provides the actual
+loopback TLS handshake fixture for matching/mismatching hostnames.
