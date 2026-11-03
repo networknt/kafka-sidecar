@@ -354,3 +354,24 @@ When user try  following workflow to consumer records:
 * [Tutorial](https://doc.networknt.com/tutorial/proxy/) with step by step guide for RESTful proxy
 * [Configuration](https://doc.networknt.com/service/proxy/configuration/) for different configurations based on your situations
 * [Artifact](https://doc.networknt.com/service/proxy/artifact/) to guide customer to choose the right artifact to deploy light-proxy.
+
+
+### Kafka schema registration migration
+
+Kafka templates use `auto.register.schemas` and the corresponding
+`kafka-producer.auto.register.schemas`, `kafka-consumer.auto.register.schemas`,
+and `kafka-streams.auto.register.schemas` overrides in `values.yml`.
+Rename existing `kafka-*.schema.registry.auto.register.schemas` overrides when
+regenerating or upgrading configuration; the old override names are unused.
+Confluent ignored the old `schema.registry.auto.register.schemas` property, so
+renaming an old `false` setting makes lookup-only behavior effective. Register
+schemas before selecting canonical `false`; `true` allows automatic registration.
+Light's own Avro serializer retains its legacy fallback for handwritten old-key
+configurations, with the canonical key taking precedence. Users relying on that
+fallback must also migrate their values overrides to retain a `false` setting.
+
+The packaged `src/main/resources/config/kafka-consumer.yml` now explicitly uses
+canonical `false`. This preserves its written intent but changes Confluent
+serialization from its previous default registration behavior to lookup-only.
+Other supplied Kafka configurations retain their `true` defaults. This setting
+controls serialization, not schema registration during deserialization.
