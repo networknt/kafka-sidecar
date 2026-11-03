@@ -435,3 +435,34 @@ properties using the fixture metadata in the POM. Missing or blank properties no
 fail with a message naming the property and the Maven test command, before path
 or hash processing. `mvn test -Dtest=ChaosMonkeyBinaryCompatibilityTest` prepares
 the fixture and passes both properties automatically.
+
+
+### Kafka schema registration migration
+
+Kafka templates use `auto.register.schemas` and the corresponding
+`kafka-producer.auto.register.schemas`, `kafka-consumer.auto.register.schemas`,
+and `kafka-streams.auto.register.schemas` overrides in `values.yml`.
+Rename existing `kafka-*.schema.registry.auto.register.schemas` overrides when
+regenerating or upgrading configuration; the old override names are unused.
+Confluent ignored the old `schema.registry.auto.register.schemas` property, so
+renaming an old `false` setting makes lookup-only behavior effective. Register
+schemas before selecting canonical `false`; `true` allows automatic registration.
+Light's own Avro serializer retains its legacy fallback for handwritten old-key
+configurations, with the canonical key taking precedence. Users relying on that
+fallback must also migrate their values overrides to retain a `false` setting.
+
+The packaged `src/main/resources/config/kafka-consumer.yml` now explicitly uses
+canonical `false`. This preserves its written intent but changes Confluent
+serialization from its previous default registration behavior to lookup-only.
+Other supplied Kafka configurations retain their `true` defaults. This setting
+controls serialization, not schema registration during deserialization.
+
+### Jackson 3.1.8 CI sources
+
+The Maven pin remains `3.1.8`. CI resolves prerequisites from full commit SHAs in
+`ci/jackson3-source-refs.json`, including the Jackson 3.1.8 downgrade commits;
+there is no default lookup of a moving branch or PR. The optional `source_refs`
+dispatch input overlays that manifest with explicitly supplied full SHAs.
+The selected light-4j source includes the Jackson 3.1.8 common-feature fixture
+repair. Full remote consumer source-build CI is required before merge; local
+cached-dependency tests do not establish source-stack qualification.
