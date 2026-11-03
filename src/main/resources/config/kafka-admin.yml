@@ -13,7 +13,7 @@ properties:
   security.protocol: ${kafka-admin.security.protocol:SASL_SSL}
   sasl.mechanism: ${kafka-admin.sasl.mechanism:PLAIN}
   sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-admin.username:username}\" password=\"${KAFKA_ADMIN_PASSWORD:password}\";"
-  ssl.endpoint.identification.algorithm: ${kafka-admin.ssl.endpoint.identification.algorithm:algo-name}
+  ssl.endpoint.identification.algorithm: ${kafka-admin.ssl.endpoint.identification.algorithm:https}
   ssl.truststore.location: ${kafka-admin.ssl.truststore.location:/truststore/kafka.server.truststore.jks}
   ssl.truststore.password: ${kafka-admin.ssl.truststore.password:changeme}
   client.rack: ${kafka-admin.client.rack:rack-name}

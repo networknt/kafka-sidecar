@@ -19,7 +19,7 @@ properties:
   # security.protocol: ${kafka-streams.security.protocol:SASL_SSL}
   # sasl.mechanism: ${kafka-streams.sasl.mechanism:PLAIN}
   # sasl.jaas.config: "org.apache.kafka.common.security.plain.PlainLoginModule required username=\"${kafka-streams.username:username}\" password=\"${KAFKA_STREAMS_PASSWORD:password}\";"
-  # ssl.endpoint.identification.algorithm: ${kafka-streams.ssl.endpoint.identification.algorithm:algo-name}
+  # ssl.endpoint.identification.algorithm: ${kafka-streams.ssl.endpoint.identification.algorithm:https}
 
   # ssl.truststore.location: ${kafka-streams.ssl.truststore.location:/config/client.truststore}
   # ssl.truststore.password: ${kafka-streams.ssl.truststore.password:password}
