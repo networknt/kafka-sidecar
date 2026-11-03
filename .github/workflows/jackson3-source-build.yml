@@ -26,12 +26,24 @@ jobs:
       - name: Resolve prerequisite commits
         id: prerequisites
         env:
+          GH_TOKEN: ${{ github.token }}
           SOURCE_REFS: ${{ inputs.source_refs || '{}' }}
         shell: bash
         run: |
+          set -euo pipefail
           jq -e --argjson expected '["http-client","json-overlay","light-4j","light-chaos-monkey","light-kafka","light-rest-4j","openapi-parser","yaml-rule"]' 'type == "object" and keys == $expected and all(.[]; type == "string" and test("^[0-9a-f]{40}$"))' consumer/ci/jackson3-source-refs.json >/dev/null
-          jq -e 'type == "object" and all(to_entries[]; (.key | IN("yaml-rule", "http-client", "light-4j", "json-overlay", "openapi-parser", "light-rest-4j", "light-chaos-monkey", "light-kafka")) and (.value | type == "string" and test("^[0-9a-f]{40}$")))' <<< "$SOURCE_REFS" >/dev/null
+          jq -e --slurpfile manifest consumer/ci/jackson3-source-refs.json 'type == "object" and all(to_entries[]; (.key as $repo | $manifest[0] | has($repo)) and (.value | type == "string" and test("^[0-9a-f]{40}$")))' <<< "$SOURCE_REFS" >/dev/null
           source_refs=$(jq -c --argjson overrides "$SOURCE_REFS" '. * $overrides' consumer/ci/jackson3-source-refs.json)
+          while IFS=$'\t' read -r repo sha; do
+            default_branch=$(gh api "repos/networknt/$repo" --jq .default_branch)
+            resolved=$(gh api "repos/networknt/$repo/commits/$sha" --jq .sha)
+            [[ "$resolved" == "$sha" ]] || { echo "Commit mismatch for $repo: $sha" >&2; exit 1; }
+            status=$(gh api "repos/networknt/$repo/compare/$sha...$default_branch" --jq .status)
+            case "$status" in
+              ahead|identical) ;;
+              *) echo "$repo pin $sha is not on default branch $default_branch ($status)" >&2; exit 1 ;;
+            esac
+          done < <(jq -r 'to_entries[] | [.key, .value] | @tsv' <<< "$source_refs")
           jq -r 'to_entries[] | "\(.key | gsub("-"; "_"))=\(.value)"' <<< "$source_refs" >> "$GITHUB_OUTPUT"
       - uses: actions/checkout@v4
         with:

@@ -439,23 +439,27 @@ the fixture and passes both properties automatically.
 
 ### Kafka schema registration migration
 
-Kafka templates use `auto.register.schemas` and the corresponding
-`kafka-producer.auto.register.schemas`, `kafka-consumer.auto.register.schemas`,
-and `kafka-streams.auto.register.schemas` overrides in `values.yml`.
-Rename existing `kafka-*.schema.registry.auto.register.schemas` overrides when
-regenerating or upgrading configuration; the old override names are unused.
-Confluent ignored the old `schema.registry.auto.register.schemas` property, so
-renaming an old `false` setting makes lookup-only behavior effective. Register
-schemas before selecting canonical `false`; `true` allows automatic registration.
-Light's own Avro serializer retains its legacy fallback for handwritten old-key
-configurations, with the canonical key taking precedence. Users relying on that
-fallback must also migrate their values overrides to retain a `false` setting.
+Shipped Kafka configurations use the canonical Kafka property
+`properties.auto.register.schemas`. The deployment override names remain
+`kafka-producer.schema.registry.auto.register.schemas`,
+`kafka-consumer.schema.registry.auto.register.schemas`, and
+`kafka-streams.schema.registry.auto.register.schemas`. Existing overrides in
+`values.yml`, config server/Portal values, or environment variables continue to
+work; no override rename is required. The shorter `kafka-*.auto.register.schemas`
+names are not used by these sidecar configurations.
 
-The packaged `src/main/resources/config/kafka-consumer.yml` now explicitly uses
-canonical `false`. This preserves its written intent but changes Confluent
-serialization from its previous default registration behavior to lookup-only.
-Other supplied Kafka configurations retain their `true` defaults. This setting
-controls serialization, not schema registration during deserialization.
+Confluent ignored the old Kafka property `schema.registry.auto.register.schemas`.
+For configurations passed to a Confluent serializer, an existing `false` override
+now selects lookup-only behavior and requires schemas to be registered beforehand;
+`true` allows automatic registration. Light's own Avro serializer retains its
+legacy Kafka-property fallback for handwritten configurations, with the canonical
+property taking precedence.
+
+The packaged `src/main/resources/config/kafka-consumer.yml` retains its `false`
+default; all other supplied client configurations retain `true`. The sidecar
+consumer uses `ByteArrayDeserializer` and does not construct a serializer from
+these consumer properties, so its consumption behavior does not change. Schema
+registration is a serialization setting, not a deserialization setting.
 
 ### Jackson 3.1.8 CI sources
 
@@ -463,6 +467,14 @@ The Maven pin remains `3.1.8`. CI resolves prerequisites from full commit SHAs i
 `ci/jackson3-source-refs.json`, including the Jackson 3.1.8 downgrade commits;
 there is no default lookup of a moving branch or PR. The optional `source_refs`
 dispatch input overlays that manifest with explicitly supplied full SHAs.
+Before checkout, CI verifies that every selected commit exists and is an ancestor
+of its repository's default branch; unmerged heads and missing commits fail early.
 The selected light-4j source includes the Jackson 3.1.8 common-feature fixture
 repair. Full remote consumer source-build CI is required before merge; local
 cached-dependency tests do not establish source-stack qualification.
+
+The current light-4j pin also contains two config-module fixture repairs that are
+not yet on its default branch. The ancestry check intentionally rejects this pin;
+merge those upstream repairs and update the manifest to their merged commit
+before expecting source-build CI to pass. Do not substitute the existing merge of
+light-4j #2842: it lacks those two repairs.
