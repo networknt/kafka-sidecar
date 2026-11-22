@@ -1,5 +1,18 @@
 # Change Log
 
+## [2.5.1](https://github.com/networknt/kafka-sidecar/tree/2.5.1) (2026-11-21)
+
+**Commits:**
+
+- upgrade to version 2.5.1 before release in 2.x branch ([0fa0113](https://github.com/networknt/kafka-sidecar/commit/0fa01137b17961a738c310183fca418473f7ce5b)) (by Steve Hu)
+- upgrade logback to 1.6.8 from 1.6.7 ([83a7d81](https://github.com/networknt/kafka-sidecar/commit/83a7d810a2b7c139493192dc32117bbd49cd2f8f)) (by Steve Hu)
+- upgrade logback to 1.6.7 from 1.6.6 ([b3fdad0](https://github.com/networknt/kafka-sidecar/commit/b3fdad08d8489cdec24a1056e1f3b2b345977f32)) (by Steve Hu)
+- upgrade maven-version to 2.25.2 from 2.23.0 ([50334ec](https://github.com/networknt/kafka-sidecar/commit/50334ec3595a977fa2d1133d106ca1c5fcbbaad8)) (by Steve Hu)
+- upgrade exec-maven to 3.7.0 from 3.6.4 ([5f48ba6](https://github.com/networknt/kafka-sidecar/commit/5f48ba6c26d706a7e0f5cc3fc16e803ef184d879)) (by Steve Hu)
+- upgrade maven-compiler to 3.16.0 from 3.8.1 ([faf671b](https://github.com/networknt/kafka-sidecar/commit/faf671b6c2416350c8e4baaf092b8f3eb4f4e7f8)) (by Steve Hu)
+- upgrade maven-surefire to 3.6.1 from 3.6.0 ([547a577](https://github.com/networknt/kafka-sidecar/commit/547a57748edffea3995103ae0229475feaaf5c89)) (by Steve Hu)
+- upgrade to version 2.5.1-SNAPSHOT after release in 2.x branch ([09ba923](https://github.com/networknt/kafka-sidecar/commit/09ba923e6d344b1dd28ddc579c4db2862b7acfa2)) (by Steve Hu)
+
 ## [2.5.0](https://github.com/networknt/kafka-sidecar/tree/2.5.0) (2026-11-04)
 
 **Commits:**
